@@ -128,8 +128,19 @@ def _actualizar_metricas_directa(estado, pips):
 # ============================================================
 
 def _nuevo_id():
+    """
+    FIX v5.1: ID basado en el reloj (segundos desde 1970).
+    SIEMPRE es mayor que cualquier ID anterior, aunque se borre
+    el CSV o se reinicie el scanner. Así el EA MicroGrid nunca
+    descarta señales nuevas por tener un ID 'viejo' en memoria.
+    """
     global _contador_id
-    _contador_id += 1
+    import time
+    nuevo = int(time.time())
+    # Si dos señales caen en el mismo segundo, suma 1 para que sea único
+    if nuevo <= _contador_id:
+        nuevo = _contador_id + 1
+    _contador_id = nuevo
     return _contador_id
 
 def _win_rate():
