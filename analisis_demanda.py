@@ -72,6 +72,13 @@ TF_H4 = mt5.TIMEFRAME_H4  # no está en config.py, lo tomamos directo de MT5
 from config_v413 import INDICES_CONFIG as _INDICES_CONFIG_MACRO
 from utils import obtener_df, enviar_telegram
 from estructura import detectar_swings, detectar_tendencia, detectar_bos_choch
+from sweep_v6 import verificar_sweep
+from pd_filter_v6 import verificar_premium_discount
+from choch_m1_v6 import verificar_choch_m1
+from ob_v5 import verificar_obs
+from volumen_sintetico_v6 import analizar_volumen_sintetico
+from institutional_setup_v6 import evaluar_setup_institucional
+from resistencias import obtener_niveles
 
 # v5: stubs para módulos del v4 no disponibles
 def detectar_reaccion_scalping(*a, **k): return False, "neutral", 0
@@ -119,6 +126,15 @@ def analizar_demanda(simbolo: str) -> str:
     df_m15 = obtener_df(simbolo, TF_M15, VELAS_M15)
     df_h1  = obtener_df(simbolo, TF_H1,  VELAS_H1)
     df_h4  = obtener_df(simbolo, TF_H4,  200)  # H4 para swing
+
+    # ── Módulos v6 — contexto institucional ──────────────
+    sweep    = verificar_sweep(simbolo, es_bajista)
+    pd_ctx   = verificar_premium_discount(simbolo, precio, es_bajista)
+    zonas_v  = obtener_niveles(simbolo, solo_activas=True, min_fuerza=1)
+    choch_m1 = verificar_choch_m1(simbolo, precio, es_bajista, zonas_v)
+    obs_v5   = verificar_obs(simbolo, precio, es_bajista)
+    vsd      = analizar_volumen_sintetico(simbolo, es_bajista)
+    inst     = evaluar_setup_institucional(simbolo, precio)
 
     # ── Sesgo H1 ──────────────────────────────────────────
     sesgo_txt   = "sin datos"
@@ -240,6 +256,52 @@ def analizar_demanda(simbolo: str) -> str:
         f"{'─'*36}",
         "<b>ENTRADAS POSIBLES:</b>",
     ]
+
+    # ── Sección v6 — contexto institucional ─────────────
+    lineas.append(f"{'─'*36}")
+    lineas.append("<b>CONTEXTO INSTITUCIONAL (v6):</b>")
+
+    # Sweep
+    if sweep['hubo_sweep']:
+        lineas.append(f"  🧹 {sweep['descripcion']}")
+    else:
+        lineas.append(f"  🧹 Sweep: sin barrido reciente")
+
+    # Premium / Discount
+    lineas.append(f"  {pd_ctx['descripcion']}")
+
+    # CHoCH M1
+    if choch_m1['detectado']:
+        lineas.append(f"  🎯 CHoCH M1 {'alcista 📈' if not es_bajista else 'bajista 📉'} — trigger activo")
+    elif choch_m1['en_zona']:
+        lineas.append(f"  ⏳ En zona — esperando CHoCH M1")
+    else:
+        lineas.append(f"  🎯 CHoCH M1: sin confirmación")
+
+    # OB v5
+    if obs_v5['ob_h1']['detectado']:
+        ob = obs_v5['ob_h1']
+        lineas.append(f"  🏛 OB H1: [{ob['ob_low']:.0f}–{ob['ob_high']:.0f}] {'🔥 FUERTE' if ob['es_fuerte'] else 'Normal'}")
+    if obs_v5['ob_m1']['detectado']:
+        ob = obs_v5['ob_m1']
+        lineas.append(f"  🏛 OB M1: [{ob['ob_low']:.0f}–{ob['ob_high']:.0f}] trigger M1")
+
+    # VSD
+    if vsd['alerta']:
+        lineas.append(f"  {vsd['descripcion']}")
+    else:
+        lineas.append(f"  📊 VSD: {vsd['vsd_score']} — movimiento normal")
+
+    # Setup institucional
+    if inst['detectado']:
+        lineas.append(f"  🏛 SETUP INSTITUCIONAL ACTIVO ✅")
+        lineas.append(f"     Confirmación: {inst['confirmacion']}")
+        lineas.append(f"     Entrada: {inst['entrada']:.0f} | SL: {inst['sl']:.0f} | TP1: {inst['tp1']:.0f}")
+    else:
+        lineas.append(f"  🏛 Setup institucional: no detectado")
+
+    lineas.append(f"{'─'*36}")
+    lineas.append("<b>ENTRADAS POSIBLES:</b>")
 
     # Scalping
     if scalp:

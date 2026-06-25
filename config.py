@@ -5,14 +5,14 @@
 #  ─────────────────────────────────────────────────────────
 #  [~] PainX 400: parámetros calibrados con datos CSV reales
 #      ob_h4_min=217, ob_h1_min=110, fvg_bear_fuerte=48pts
-#      horas_activas_utc, rango_saturado, rsi_invertido
+#      horas_activas_utc, rango_saturado
 #  [~] GainX 600: ob_h4_min=232, ob_h1_min=108
 #      OB MAESTRO 110320-110420 confirmado (4 TFs confluencia)
 #      ob_maestro_low/high, horas_activas_utc
 #  [~] GainX 1200: ob_h1_min=120, rango_diario=900
 #      ob_maestro_low/high=91088-91130 (OB+Fib78.6%)
 #  NUEVA LLAVE: ob_h4_min, ob_h1_min, fvg_bull/bear_fuerte,
-#               horas_activas_utc, rango_saturado, rsi_invertido,
+#               horas_activas_utc, rango_saturado,
 #               ob_maestro_low/high
 #
 #  CAMBIOS v4.7:
@@ -75,6 +75,8 @@ SIMBOLOS = [
     "GainX 800",    # v4.9 — bidireccional, rango 415pts, pre-Londres activo
     "GainX 999",    # v4.9 — bear puro, rango 611pts, FVG bull más grande familia
     "GainX 1200",
+    # ── FlipX — solo para EmaScalpD (no afecta scanner principal) ──
+    "FlipX 1", "FlipX 2", "FlipX 3", "FlipX 4", "FlipX 5",
 ]
 
 # ── NATURALEZA DE CADA ÍNDICE ──────────────────────────────
@@ -199,7 +201,6 @@ INDICE_CONFIG = {
         "fvg_bear_fuerte":   48,       # avg real FVG bajistas M15 (MAYOR)
         "horas_activas_utc": [6,7,8,9,15,16,17,20],
         "rango_saturado":    520,      # 90% rango diario — no entrar si ya se movió
-        "rsi_invertido":     True,     # RSI>70 = SELL en índice bajista
     },
     # ── PainX 600 — v4.2 ──────────────────────────────────
     # Daily=592 | M15=50 | SL=75 | FVGs H4: 417 (avg 111pts)
@@ -304,7 +305,6 @@ INDICE_CONFIG = {
         "fvg_bear_fuerte":   33,       # avg real FVG bajistas M15
         "horas_activas_utc": [9,10,11,12,13,14,15,16],
         "rango_saturado":    528,      # 90% rango diario
-        "rsi_invertido":     False,
         "ob_maestro_low":    110320,   # OB institucional H4+H1+M30+M15
         "ob_maestro_high":   110420,   # zona de máxima confluencia
     },
@@ -331,7 +331,6 @@ INDICE_CONFIG = {
         "fvg_bear_fuerte":   30,
         "horas_activas_utc": [7,10,12,14,15,16,18,22],
         "rango_saturado":    550,      # 611 * 0.9
-        "rsi_invertido":     True,     # RSI>70 = SELL (bajista de facto)
         "ob_maestro_low":    83218,    # mínimo del ciclo mayo 2026
         "ob_maestro_high":   83512,    # soporte extremo clave
     },
@@ -361,7 +360,6 @@ INDICE_CONFIG = {
         "fvg_bear_fuerte":   27,       # avg real FVG bajistas M15
         "horas_activas_utc": [5,6,7,10,14,15,17,18,23,0,1],
         "rango_saturado":    373,      # 415 * 0.9
-        "rsi_invertido":     False,    # no invertido (rebotes alcistas válidos)
         "ob_maestro_low":    91247,    # Bull OB H4 clave (may 17)
         "ob_maestro_high":   91494,    # zona de máxima confluencia
     },
@@ -390,7 +388,6 @@ INDICE_CONFIG = {
         "fvg_bear_fuerte":   40,
         "horas_activas_utc": [0,1,6,9,10,13,14,15,16,21,22,23],
         "rango_saturado":    810,      # 90% rango diario
-        "rsi_invertido":     False,
         "ob_maestro_low":    91088,    # OB H4 + Fib 78.6% activo mayo 2026
         "ob_maestro_high":   91130,
     },

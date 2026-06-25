@@ -42,9 +42,25 @@ from config import TF_M1, VELAS_M1, SIMBOLOS_BAJISTAS
 LOG_FILE  = "trades_log.csv"
 TOL_TOQUE = 5
 
+# ── REEMPLAZO DE SEÑALES (NUEVO) ──────────────────────────
+# Cuando llega una señal nueva de un símbolo que YA tiene una
+# señal ACTIVO, la vieja se marca como REEMPLAZADA y deja de
+# seguirse. La última entrada manda; la primera se elimina.
+#
+#  REEMPLAZAR_SOLO_ACTIVO = True  → solo reemplaza señales en
+#      estado ACTIVO. Las que ya tocaron TP1 (ganadora real
+#      corriendo) NO se tocan.
+#  AVISAR_REEMPLAZO_TG    = False  → manda nota corta a Telegram
+#      avisando que la señal anterior quedó anulada.
+REEMPLAZAR_SOLO_ACTIVO = True
+AVISAR_REEMPLAZO_TG    = False
+
 # ── SHEETS — distribución de señales a usuarios ───────────
 SHEETS_URL   = "https://script.google.com/macros/s/AKfycbxu_g06ewkVL0oBysnabHFeufkXbK1jzOd74UydhMaXO2P1WmUWaJAP_AeBX7o0B7yMNg/exec"
 SALT_SENALES = "MicroGrid2025DiegoSALSECRETA"
+
+# ── CLOUDFLARE WORKER — señales globales para todos los EA ─
+WORKER_URL = "https://diefert-senales.diefert2022.workers.dev"
 
 def _hash_senal(simbolo, entrada):
     """Hash para verificar que la señal viene del scanner oficial."""
@@ -79,6 +95,34 @@ def _enviar_senal_sheets(trade):
         print(f"  [Sheets] Señal enviada: {resp}")
     except Exception as e:
         print(f"  [Sheets] Error enviando señal: {e}")
+
+def _enviar_senal_worker(trade):
+    """Sube la señal al Cloudflare Worker para que cualquier EA la descargue."""
+    import json
+    try:
+        simbolo = trade["simbolo"]
+        entrada = round(trade["entrada"], 2)
+        payload = json.dumps({
+            "id":      trade["id"],
+            "simbolo": simbolo,
+            "dir":     "SHORT" if trade["es_bajista"] else "LONG",
+            "entrada": entrada,
+            "sl":      round(trade["sl"],  2),
+            "tp1":     round(trade["tp1"], 2),
+            "tp2":     round(trade["tp2"], 2),
+            "score":   trade["score_poi"],
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            WORKER_URL,
+            data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": "DiefertScanner/5.0"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            resp = r.read().decode("utf-8").strip()
+        print(f"  [Worker] Señal enviada: {resp}")
+    except Exception as e:
+        print(f"  [Worker] Error enviando señal: {e}")
 
 COLUMNAS = [
     "id", "fecha", "hora", "simbolo", "direccion",
@@ -208,6 +252,8 @@ def _guardar_trade_nuevo(trade):
     _copiar_csv_a_mt5()
     # Enviar señal al Sheets para usuarios con EA Licensed
     _enviar_senal_sheets(trade)
+    # Enviar señal al Worker de Cloudflare (llega a cualquier EA en el mundo)
+    _enviar_senal_worker(trade)
 
 
 MT5_FILES = r"C:\Users\Pc-Trabajo\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Files\trades_log.csv"
@@ -221,10 +267,13 @@ def _copiar_csv_a_mt5():
         print(f"  [Tracker] Warning: no se pudo copiar a MT5 Files: {e}")
 
 
-def _actualizar_trade_csv(trade_id, estado, precio_cierre=None, pips=None):
+def _actualizar_trade_csv(trade_id, estado, precio_cierre=None, pips=None, notas=None):
     """
     Actualiza el estado de un trade existente en el CSV.
     Lee todas las filas, modifica la que corresponde, reescribe.
+
+    notas → texto opcional para la columna 'notas' (p.ej. el motivo
+            del reemplazo). Si es None, no toca la nota existente.
     """
     if not os.path.exists(LOG_FILE):
         return
@@ -240,12 +289,76 @@ def _actualizar_trade_csv(trade_id, estado, precio_cierre=None, pips=None):
                     fila["hora_cierre"]    = datetime.now().strftime("%H:%M:%S")
                 if pips is not None:
                     fila["pips_resultado"] = round(pips, 1)
+                if notas is not None:
+                    fila["notas"] = notas
             filas.append(fila)
 
     with open(LOG_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNAS)
         writer.writeheader()
         writer.writerows(filas)
+
+
+# ============================================================
+#  REEMPLAZO DE SEÑALES ACTIVAS (NUEVO)
+#  La última señal de un símbolo anula la anterior.
+# ============================================================
+
+def _reemplazar_activas(simbolo, nuevo_id, entrada_nueva, es_bajista):
+    """
+    Marca como REEMPLAZADA cualquier señal del mismo símbolo que
+    siga viva. Las saca del seguimiento en memoria y deja nota en
+    el CSV. Retorna la lista de señales reemplazadas (para avisar).
+
+    Estados que se reemplazan:
+      - ACTIVO siempre.
+      - TP1 solo si REEMPLAZAR_SOLO_ACTIVO = False (por defecto NO,
+        para no borrar una ganadora real que ya va corriendo).
+    """
+    estados_reemplazables = ("ACTIVO",) if REEMPLAZAR_SOLO_ACTIVO else ("ACTIVO", "TP1")
+
+    reemplazadas = []
+    for tid, t in list(_trades_activos.items()):
+        if t["simbolo"] != simbolo:
+            continue
+        if t.get("estado") not in estados_reemplazables:
+            continue
+
+        # Marcar en CSV con nota trazable
+        nota = f"REEMPLAZADA por #{nuevo_id}"
+        _actualizar_trade_csv(tid, "REEMPLAZADA", notas=nota)
+
+        # Sacar del seguimiento en memoria
+        reemplazadas.append(dict(t))
+        del _trades_activos[tid]
+
+        print(
+            f"  🔄 SEÑAL #{tid} {simbolo} REEMPLAZADA por #{nuevo_id} "
+            f"| entrada vieja={t['entrada']:.0f} → nueva={entrada_nueva:.0f}"
+        )
+
+    if reemplazadas and AVISAR_REEMPLAZO_TG:
+        _avisar_reemplazo_tg(simbolo, reemplazadas, nuevo_id, entrada_nueva, es_bajista)
+
+    return reemplazadas
+
+
+def _avisar_reemplazo_tg(simbolo, reemplazadas, nuevo_id, entrada_nueva, es_bajista):
+    """Nota corta a Telegram avisando que la señal anterior queda anulada."""
+    icono = "📉" if es_bajista else "📈"
+    viejas = ", ".join(f"#{r['id']} ({r['entrada']:.0f})" for r in reemplazadas)
+    msg = (
+        f"🔄 <b>SEÑAL REEMPLAZADA — {simbolo}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"{icono} El scanner encontró una entrada nueva.\n"
+        f"❌ Anulada: {viejas}\n"
+        f"✅ Vigente: #{nuevo_id} (entrada {entrada_nueva:.0f})\n"
+        f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+    )
+    try:
+        enviar_telegram(msg)
+    except Exception as e:
+        print(f"  [Tracker] Error avisando reemplazo: {e}")
 
 
 # ============================================================
@@ -259,9 +372,15 @@ def registrar_trade(simbolo, es_bajista, precio_entrada,
     """
     Registra un trade nuevo en memoria y en disco (CSV).
     Retorna el ID del trade para seguimiento.
+
+    NUEVO: antes de registrar, anula cualquier señal ACTIVO previa
+    del mismo símbolo (la última entrada manda).
     """
     ahora    = datetime.now()
     trade_id = _nuevo_id()
+
+    # ── Anular señales previas del mismo símbolo ──────────
+    _reemplazar_activas(simbolo, trade_id, precio_entrada, es_bajista)
 
     trade = {
         "id":            trade_id,
@@ -490,6 +609,10 @@ def resumen_efectividad():
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for fila in reader:
+            # Las reemplazadas/expiradas no son resultado real → no cuentan
+            if fila["estado"] in ("REEMPLAZADA", "EXPIRADO"):
+                continue
+
             total += 1
             sim = fila["simbolo"]
             if sim not in por_simbolo:

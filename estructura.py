@@ -68,18 +68,18 @@ def detectar_swings(df, ventana=5):
     swings = []
     n      = len(df)
 
-    for i in range(ventana, n - ventana):
-        high_i = df.iloc[i]['high']
-        low_i  = df.iloc[i]['low']
+    # Arrays numpy — compatibles con Python 3.14, más rápidos que iloc
+    highs = df['high'].to_numpy()
+    lows  = df['low'].to_numpy()
 
-        es_sh = all(
-            df.iloc[j]['high'] <= high_i
-            for j in range(i - ventana, i + ventana + 1) if j != i
-        )
-        es_sl = all(
-            df.iloc[j]['low'] >= low_i
-            for j in range(i - ventana, i + ventana + 1) if j != i
-        )
+    for i in range(ventana, n - ventana):
+        high_i = highs[i]
+        low_i  = lows[i]
+
+        indices = [j for j in range(i - ventana, i + ventana + 1) if j != i]
+
+        es_sh = all(highs[j] <= high_i for j in indices)
+        es_sl = all(lows[j]  >= low_i  for j in indices)
 
         if es_sh:
             swings.append({"tipo": "SH", "precio": round(high_i, 2), "idx": i})

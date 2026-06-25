@@ -31,7 +31,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",
         "sesgo_diario":      "NEUTRAL",     # últimas 20: 55% bear pero rebote +968pts hoy
         "sesgo_h4":          "NEUTRAL",     # H4 imágenes: rebote alcista desde 91,800
-        "rsi_invertido":     True,
 
         # Rangos reales CSV (875 velas Daily)
         "rango_daily_avg":   545,           # mediana real (antes 577)
@@ -121,7 +120,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",
         "sesgo_diario":      "BEAR",
         "sesgo_h4":          "NEUTRAL",
-        "rsi_invertido":     False,           # RSI neutro 51%
 
         "rango_daily_avg":   592,             # actualizado CSV real
         "rango_daily_max":   1276,
@@ -175,7 +173,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",        # Daily BULL 52.4% pero operamos SHORT desde zonas
         "sesgo_diario":      "BULL",         # Últimas 20 Daily: BULL fuerte (15B/5b) drift +706pts
         "sesgo_h4":          "BULL",         # H4 60v: BULL (36B/24b) drift +730pts
-        "rsi_invertido":     False,          # RSI normal
 
         # Rangos reales CSV (699 velas Daily)
         "rango_daily_avg":   592,
@@ -271,7 +268,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",        # operamos SHORT siempre en PainX
         "sesgo_diario":      "BEAR",
         "sesgo_h4":          "NEUTRAL",
-        "rsi_invertido":     False,
 
         # Rangos reales CSV 02/Jun 2026
         "rango_daily_avg":   405,           # avg real
@@ -346,7 +342,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",
         "sesgo_diario":      "BEAR",
         "sesgo_h4":          "BEAR",
-        "rsi_invertido":     True,
 
         "rango_daily_avg":   750,
         "rango_daily_max":   1300,
@@ -397,7 +392,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",
         "sesgo_diario":      "BEAR",
         "sesgo_h4":          "BEAR",
-        "rsi_invertido":     True,
 
         "rango_daily_avg":   800,
         "rango_daily_max":   1400,
@@ -448,7 +442,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",       # Monthly rebote bajista desde nov 2025
         "sesgo_diario":      "BEAR",       # Daily 62.2% bear | drift -5474pts últimos 90d
         "sesgo_h4":          "BEAR",
-        "rsi_invertido":     True,          # CSV confirma: tratar igual que PainX
 
         # Rangos (datos reales CSV — 875 velas Daily, 21004 H1, 5254 H4)
         "rango_daily_avg":   543,           # mediana real (antes 572 estimado)
@@ -524,7 +517,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",        # Daily 51.3% bear · drift bajista largo plazo
         "sesgo_diario":      "NEUTRO",      # Últimas 20 Daily: BEAR leve (8B/12b) pero drift +726pts
         "sesgo_h4":          "NEUTRO",      # H4 50/50 exacto · precio en 62% del rango mensual
-        "rsi_invertido":     False,          # Comportamiento normal — sin inversión
 
         # Rangos reales CSV (881 velas Daily)
         "rango_daily_avg":   580,
@@ -622,7 +614,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BULL",
         "sesgo_diario":      "BULL",
         "sesgo_h4":          "BULL",
-        "rsi_invertido":     False,
 
         "rango_daily_avg":   587,
         "rango_daily_max":   1000,
@@ -682,7 +673,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",        # ¡nombre GainX pero sesgo BEAR!
         "sesgo_diario":      "NEUTRAL",     # últimas 20: 40% bear, drift +1309pts (rebote)
         "sesgo_h4":          "BEAR",        # H4 bajando desde 92,307 → 91,669 hoy
-        "rsi_invertido":     True,          # 51.2% bear hist — igual que GainX 400/PainX
 
         # Rangos reales CSV (875 velas Daily)
         "rango_daily_avg":   394,           # mediana real (antes 415 estimado)
@@ -790,7 +780,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",        # Macro sigue bajista — Daily no confirmó giro
         "sesgo_diario":      "NEUTRO",      # Daily en transición — esperar 2 HH confirmados
         "sesgo_h4":          "BULL",        # CHoCH H4 confirmado 30-May — EQH roto
-        "rsi_invertido":     False,         # Cambiado: en retroceso alcista RSI normal
 
         # Rangos reales CSV (693 velas Daily)
         "rango_daily_avg":   584,
@@ -892,7 +881,6 @@ INDICES_CONFIG = {
         "sesgo_macro":       "BEAR",         # Monthly tendencia primaria bajista
         "sesgo_diario":      "BULL",         # Daily últimas 20 velas: 70% alcistas, drift +484pts
         "sesgo_h4":          "BULL",         # H4 impulso alcista desde 90,486 → 92,247 sin parar
-        "rsi_invertido":     False,           # RSI normal — sin cambios
 
         # Rangos (datos reales CSV — sin cambios, siguen vigentes)
         "rango_daily_avg":   324,

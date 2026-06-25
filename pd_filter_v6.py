@@ -48,11 +48,17 @@ from utils import obtener_df
 from estructura import detectar_swings
 from config import TF_H1, VELAS_H1, TF_H4, VELAS_H4
 
-# ?ndices con movimientos grandes ? usar H4 para rango P/D
-INDICES_H4 = {"PainX 1200", "GainX 1200", "PainX 999", "GainX 999"}
+# Todos los índices usan H4 para rango P/D — más estable que H1
+INDICES_H4 = {
+    "PainX 400", "GainX 400",
+    "PainX 600", "GainX 600",
+    "PainX 800", "GainX 800",
+    "PainX 999", "GainX 999",
+    "PainX 1200", "GainX 1200",
+}
 
-# Velas extra para ?ndices en m?ximos hist?ricos
-VELAS_H4_GRANDE = 200  # cubre ~33 d?as
+# 120 velas H4 = 20 días — captura el swing macro real
+VELAS_H4_GRANDE = 120
 
 # Buffer: si el precio está a este % del equilibrium, se considera
 # zona neutra (EQUILIBRIUM) — ni premium ni discount.
@@ -140,15 +146,35 @@ def verificar_premium_discount(simbolo, precio_actual, es_bajista):
             if swing_high <= swing_low:
                 return resultado_neutro
 
+        # ── CORRECCIÓN: precio fuera del rango → expandir ──
+        # Si el precio actual está más allá del high/low calculado
+        # (ej: precio en máximo histórico), el rango queda obsoleto.
+        # Lo expandimos para que el precio siempre esté adentro.
+        # Esto evita pct > 100% o < 0% (el bug del 256%).
+        precio_sobre_rango = precio_actual > swing_high
+        precio_bajo_rango  = precio_actual < swing_low
+        if precio_sobre_rango:
+            swing_high = round(precio_actual * 1.001, 2)   # +0.1% de margen
+        if precio_bajo_rango:
+            swing_low  = round(precio_actual * 0.999, 2)   # -0.1% de margen
+
         rango       = swing_high - swing_low
         equilibrium = round(swing_low + rango * 0.5, 2)
         buffer      = rango * (BUFFER_EQ_PCT / 100)
 
         # ── Posición en el rango (0% = low, 100% = high) ──
-        pct = round((precio_actual - swing_low) / rango * 100, 1)
+        pct_raw = (precio_actual - swing_low) / rango * 100
+        pct     = round(max(0.0, min(100.0, pct_raw)), 1)
 
         # ── Determinar zona ───────────────────────────────
-        if precio_actual > (equilibrium + buffer):
+        # Caso especial: precio FUERA del rango original
+        # → PREMIUM EXTREMO si está sobre el high (muy válido SHORT)
+        # → DISCOUNT EXTREMO si está bajo el low  (muy válido LONG)
+        if precio_sobre_rango:
+            zona = 'PREMIUM_EXT'    # precio sobre máximo del rango
+        elif precio_bajo_rango:
+            zona = 'DISCOUNT_EXT'   # precio bajo mínimo del rango
+        elif precio_actual > (equilibrium + buffer):
             zona = 'PREMIUM'
         elif precio_actual < (equilibrium - buffer):
             zona = 'DISCOUNT'
@@ -156,26 +182,29 @@ def verificar_premium_discount(simbolo, precio_actual, es_bajista):
             zona = 'EQUILIBRIUM'
 
         # ── Validar alineación con la dirección del trade ──
-        # GainX  (LONG)  → válido en DISCOUNT o EQUILIBRIUM
-        # PainX  (SHORT) → válido en PREMIUM o EQUILIBRIUM
+        # GainX  (LONG)  → válido en DISCOUNT, DISCOUNT_EXT, EQUILIBRIUM
+        # PainX  (SHORT) → válido en PREMIUM, PREMIUM_EXT, EQUILIBRIUM
         if es_bajista:
-            valid = zona in ('PREMIUM', 'EQUILIBRIUM')
+            valid = zona in ('PREMIUM', 'PREMIUM_EXT', 'EQUILIBRIUM')
         else:
-            valid = zona in ('DISCOUNT', 'EQUILIBRIUM')
+            valid = zona in ('DISCOUNT', 'DISCOUNT_EXT', 'EQUILIBRIUM')
 
         # ── Icono visual ──────────────────────────────────
-        if zona == 'PREMIUM':
+        if zona in ('PREMIUM', 'PREMIUM_EXT'):
             icono = '🔴'
-        elif zona == 'DISCOUNT':
+        elif zona in ('DISCOUNT', 'DISCOUNT_EXT'):
             icono = '🟢'
         else:
             icono = '🟡'
 
-        dir_txt  = 'SHORT' if es_bajista else 'LONG'
+        # Etiqueta limpia para mostrar
+        zona_display = zona.replace('_EXT', ' EXTREMO')
+
+        dir_txt   = 'SHORT' if es_bajista else 'LONG'
         valid_txt = '✅ alineado' if valid else '⚠️ contratendencia P/D'
 
         desc = (
-            f"{icono} P/D: {zona} ({pct:.0f}% del rango) | "
+            f"{icono} P/D: {zona_display} ({pct:.0f}% del rango) | "
             f"EQ={equilibrium:.0f} | "
             f"Rango [{swing_low:.0f}–{swing_high:.0f}] | "
             f"{dir_txt} → {valid_txt}"
