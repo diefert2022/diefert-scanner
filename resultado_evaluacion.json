@@ -1,0 +1,156 @@
+[
+  {
+    "simbolo": "GainX 400",
+    "direccion": "LONG",
+    "hora": "11:53:41",
+    "entrada": 99677.91,
+    "sl": 99603.91,
+    "sl_dist": 74.0,
+    "tp1_dist": 148.0,
+    "precio_actual": 99473.42,
+    "pts_ahora": -204.5,
+    "hist": {
+      "resultado": "LOSS SL",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 55.8,
+      "max_contra": 74.0,
+      "toco_sl": true,
+      "toco_tp1": false,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "PainX 400",
+    "direccion": "SHORT",
+    "hora": "17:32:53",
+    "entrada": 86844.26,
+    "sl": 86942.26,
+    "sl_dist": 98.0,
+    "tp1_dist": 196.0,
+    "precio_actual": 86916.03,
+    "pts_ahora": -71.8,
+    "hist": {
+      "resultado": "LOSS SL",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 11.5,
+      "max_contra": 98.0,
+      "toco_sl": true,
+      "toco_tp1": false,
+      "salio": false,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "GainX 600",
+    "direccion": "LONG",
+    "hora": "18:54:34",
+    "entrada": 110471.79,
+    "sl": 110381.79,
+    "sl_dist": 90.0,
+    "tp1_dist": 180.0,
+    "precio_actual": 110584.58,
+    "pts_ahora": 112.8,
+    "hist": {
+      "resultado": "POSITIVO",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 121.7,
+      "max_contra": 77.0,
+      "toco_sl": false,
+      "toco_tp1": false,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "GainX 999",
+    "direccion": "LONG",
+    "hora": "18:58:46",
+    "entrada": 80569.73,
+    "sl": 80414.97,
+    "sl_dist": 154.76,
+    "tp1_dist": 309.52,
+    "precio_actual": 80921.87,
+    "pts_ahora": 352.1,
+    "hist": {
+      "resultado": "WIN TP1",
+      "reacciono": true,
+      "primer_favor": 0,
+      "max_favor": 309.5,
+      "max_contra": 64.6,
+      "toco_sl": false,
+      "toco_tp1": true,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "PainX 600",
+    "direccion": "SHORT",
+    "hora": "19:38:29",
+    "entrada": 103866.84,
+    "sl": 103975.78,
+    "sl_dist": 108.94,
+    "tp1_dist": 217.88,
+    "precio_actual": 103805.04,
+    "pts_ahora": 61.8,
+    "hist": {
+      "resultado": "POSITIVO",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 88.1,
+      "max_contra": 26.5,
+      "toco_sl": false,
+      "toco_tp1": false,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "PainX 1200",
+    "direccion": "SHORT",
+    "hora": "19:52:19",
+    "entrada": 95131.36,
+    "sl": 95271.36,
+    "sl_dist": 140.0,
+    "tp1_dist": 280.0,
+    "precio_actual": 95215.56,
+    "pts_ahora": -84.2,
+    "hist": {
+      "resultado": "POSITIVO",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 11.6,
+      "max_contra": 84.2,
+      "toco_sl": false,
+      "toco_tp1": false,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  },
+  {
+    "simbolo": "PainX 999",
+    "direccion": "SHORT",
+    "hora": "20:29:35",
+    "entrada": 107733.71,
+    "sl": 107853.71,
+    "sl_dist": 120.0,
+    "tp1_dist": 240.0,
+    "precio_actual": 107652.75,
+    "pts_ahora": 81.0,
+    "hist": {
+      "resultado": "POSITIVO",
+      "reacciono": "True",
+      "primer_favor": 0,
+      "max_favor": 130.8,
+      "max_contra": 15.6,
+      "toco_sl": false,
+      "toco_tp1": false,
+      "salio": true,
+      "vela_entrada": 0
+    }
+  }
+]

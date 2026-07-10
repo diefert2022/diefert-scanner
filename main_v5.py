@@ -106,6 +106,10 @@ from ob_v5 import verificar_obs
 
 # ── EmaScalpD (canal exclusivo Telegram) ──────────────────
 from emascalpd_v1 import analizar_emascalpd
+
+# ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
+from spike_hunter_v1 import cazar_spikes
+# ═══ FIN BLOQUE COMPETENCIA ═══
 from volumen_sintetico_v6 import analizar_volumen_sintetico
 from contexto_inicial import (
     inicializar_contexto,
@@ -780,6 +784,13 @@ def iniciar_v5():
                     analizar_emascalpd(simbolo, df_m5_ema)
                 except Exception as e_ema:
                     print(f"  [EmaScalpD] Error en {simbolo}: {e_ema}")
+
+                # ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
+                try:
+                    cazar_spikes(simbolo)
+                except Exception as e_spk:
+                    print(f"  [spike_hunter] Error en {simbolo}: {e_spk}")
+                # ═══ FIN BLOQUE COMPETENCIA ═══
 
             # Panel cada 10 ciclos
             if ciclo % 10 == 0:
