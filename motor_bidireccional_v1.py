@@ -148,6 +148,13 @@ RR_MINIMO       = 2.0
 COOLDOWN_SEG    = 1200   # 20 min entre señales del mismo símbolo
 TOQUES_MINIMOS  = 2      # zona válida necesita ≥2 toques (cuenta, no pts)
 SCORE_ZONA_MIN  = 3      # zona válida necesita score ≥3 (cuenta, no pts)
+
+# ── Validación de metodología (24-ago-2026) ─────────────────
+# Mismo criterio que main_v5.py: mientras se valida la calidad
+# de la zona real (D1+H4+H1) + CHoCH confirmado en M5, se apagan
+# TIPO1_OB y TIPO2 acá también. Reversible: poner en False
+# reactiva los 3 tipos tal cual estaban.
+SOLO_TIPO1_ACTIVO = True
 INTERVALO_ZONAS_SEG = 900   # recalcular zonas cada 15 min, igual que resistencias.py
 
 # ── Contexto macro — caché propio, independiente de contexto_inicial.py ──
@@ -533,9 +540,9 @@ def analizar_indices_bidireccionales():
 
             # Jerarquía: TIPO1 > TIPO1_OB > TIPO2 (igual que main_v5.py)
             señal = _detectar_choch_en_zona(zonas_validas, df_m5, esc)
-            if not señal['detectado']:
+            if not señal['detectado'] and not SOLO_TIPO1_ACTIVO:
                 señal = _detectar_ob_h1_activo(simbolo, perfil, esc)
-            if not señal['detectado']:
+            if not señal['detectado'] and not SOLO_TIPO1_ACTIVO:
                 señal = _detectar_bos_retroceso(simbolo)
             if not señal['detectado']:
                 continue
