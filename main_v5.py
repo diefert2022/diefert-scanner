@@ -112,7 +112,7 @@ from emascalpd_v1 import analizar_emascalpd
 from harmonicos_v1 import analizar_patron_armonico
 
 # ── Estructura pura para índices nuevos bidireccionales (v1 — FX Vol / SFX Vol) ──
-from estructura_nuevos_v1 import analizar_estructura_nuevos
+from motor_bidireccional_v1 import analizar_indices_bidireccionales
 
 # ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
 from spike_hunter_v1 import cazar_spikes
@@ -836,11 +836,11 @@ def iniciar_v5():
                 # incluso si se congela a mitad de un ciclo largo.
                 _latido()
 
-            # ── Estructura pura para índices nuevos (FX Vol / SFX Vol) ──
+            # ── Motor completo bidireccional (FX Vol / SFX Vol) ─────────
             # Módulo 100% independiente — no toca el motor TIPO1/TIPO1_OB/TIPO2.
-            # Ver estructura_nuevos_v1.py para el detalle completo.
+            # Ver motor_bidireccional_v1.py para el detalle completo.
             try:
-                analizar_estructura_nuevos()
+                analizar_indices_bidireccionales()
             except Exception as e_est_nuevos:
                 print(f"  [Estructura nueva] ERROR general: {e_est_nuevos}")
 
