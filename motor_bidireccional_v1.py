@@ -74,6 +74,7 @@
 #    analizar_indices_bidireccionales()
 # ============================================================
 
+import os
 import time
 from datetime import datetime
 
@@ -145,6 +146,23 @@ def _clave(simbolo):
     return f"bidir_{simbolo}"
 
 
+def _latido():
+    """
+    Heartbeat propio — mismo archivo que usa main_v5.py, para que
+    el watchdog NO piense que el scanner se colgó mientras este
+    módulo calcula las 10 zonas nuevas (puede tardar varios
+    minutos la primera vez). No importa _latido() de main_v5.py
+    para evitar import circular (main_v5.py importa este módulo);
+    en vez de eso escribe el mismo archivo de forma independiente.
+    """
+    try:
+        heartbeat_path = os.path.join(os.path.dirname(__file__), "heartbeat.txt")
+        with open(heartbeat_path, 'w', encoding='utf-8') as f:
+            f.write(datetime.now().isoformat())
+    except Exception:
+        pass
+
+
 def _parametros_escalados(perfil):
     """
     Deriva tolerancias ESCALADAS a partir del perfil real del símbolo,
@@ -184,6 +202,8 @@ def _refrescar_contexto_si_necesario():
             _contexto_nuevos[simbolo] = _calcular_contexto_simbolo(simbolo)
         except Exception as e:
             print(f"  [Motor bidireccional][contexto] Error en {simbolo}: {e}")
+        finally:
+            _latido()
     _ultimo_refresh_ctx = ahora
     print("  ✅ [Motor bidireccional] Contexto macro listo\n")
 
@@ -475,6 +495,7 @@ def analizar_indices_bidireccionales():
             esc    = _parametros_escalados(perfil)
 
             _actualizar_zonas_si_necesario(simbolo, esc)
+            _latido()   # ← clave: heartbeat después de lo más pesado (zonas)
             todas_zonas = _cache_zonas.get(simbolo, [])
             zonas_validas = [
                 z for z in todas_zonas
@@ -533,3 +554,5 @@ def analizar_indices_bidireccionales():
 
         except Exception as e:
             print(f"  [Motor bidireccional] Error en {simbolo}: {e}")
+        finally:
+            _latido()   # heartbeat siempre, incluso si el símbolo dio error
