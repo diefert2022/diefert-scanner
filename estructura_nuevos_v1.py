@@ -46,6 +46,34 @@
 #  bajista = venta). No hay sesgo fijo por símbolo, a
 #  diferencia de PainX/GainX.
 #
+#  CONTEXTO MACRO (v1.2):
+#  ─────────────────────────────────────────────────────────
+#  Reusa _calcular_contexto_simbolo() de contexto_inicial.py
+#  (sin modificar ese archivo) para traer PDH/PDL, equilibrium
+#  H1, rango H1 y bias D1+H4+M15 — igual que ven PainX/GainX/
+#  FlipX. Se calcula una vez al arrancar (o en la primera
+#  llamada) y se refresca cada 60 min, en el mismo patrón que
+#  refrescar_si_necesario() del módulo original, pero con su
+#  propio caché separado — no toca CONTEXTO ni _ultimo_refresh
+#  de contexto_inicial.py.
+#  NOTA: esa función calcula "alineado" asumiendo PainX=bajista/
+#  GainX=alcista. Para estos índices bidireccionales ese campo
+#  no aplica, así que el mensaje NO lo muestra — solo bias,
+#  PDH/PDL y rango, que sí son válidos para cualquier símbolo.
+#
+#  CALIBRACIÓN REAL (v1.3 — 24-ago-2026):
+#  ─────────────────────────────────────────────────────────
+#  SL_MINIMO_NUEVOS reemplaza el buffer genérico fijo de 15pts
+#  por un valor calibrado POR SÍMBOLO, generado con
+#  actualizar_perfiles_nuevos_v1.py (3 meses de historial real
+#  MT5, campo "sl_minimo" = promedio cuerpo H1 + buffer 10pts).
+#  Sin esto, el SL se activaba con ruido normal del mercado en
+#  vez de con una rotura real — estos índices se mueven en
+#  rangos MUCHO más grandes en puntos que PainX/GainX (ej.
+#  SFX Vol 60 necesita ~2365pts, no 15pts).
+#  Símbolo nuevo que no esté en el diccionario → usa
+#  SL_BUFFER_DEFAULT como respaldo (mismo valor que antes).
+#
 #  CÓMO SE LLAMA DESDE main_v5.py:
 #    from estructura_nuevos_v1 import analizar_estructura_nuevos
 #    ...dentro del ciclo, UNA VEZ por vuelta (no por símbolo,
@@ -53,12 +81,14 @@
 #    analizar_estructura_nuevos()
 # ============================================================
 
+import time
 from datetime import datetime
 
 from config import TF_M5, VELAS_M5
 from utils import obtener_df, enviar_telegram, puede_enviar, registrar_envio
 from estructura import detectar_swings, detectar_tendencia, detectar_bos_choch
 from trade_tracker import registrar_trade
+from contexto_inicial import _calcular_contexto_simbolo
 
 # ── Símbolos nuevos (mismo nombre en Weltrade y en el broker nuevo) ──
 SIMBOLOS_ESTRUCTURA_NUEVOS = [
@@ -69,24 +99,73 @@ SIMBOLOS_ESTRUCTURA_NUEVOS = [
 # ── Parámetros (ajustables sin afectar nada más del scanner) ──
 VENTANA_SWING  = 3      # misma ventana que usa TIPO1 en M5 (main_v5.py)
 VELAS_RECIENTE = 3      # el CHoCH debe haber ocurrido en las últimas N velas M5
-SL_BUFFER      = 15     # pts extra más allá del swing roto (buffer de seguridad)
 RR_MINIMO      = 2.0    # mismo mínimo que exige el motor principal
 COOLDOWN_SEG   = 1200   # 20 min entre señales del mismo símbolo (igual que COOLDOWN_SEÑAL)
+
+# ── SL calibrado por símbolo (real, MT5, 3 meses — 24-ago-2026) ──
+# Generado con actualizar_perfiles_nuevos_v1.py. Reemplaza el buffer
+# genérico fijo que se activaba con ruido normal del mercado.
+SL_MINIMO_NUEVOS = {
+    "FX Vol 20":  206,
+    "FX Vol 40":  627,
+    "FX Vol 60":  174,
+    "FX Vol 80":  326,
+    "FX Vol 99":  353,
+    "SFX Vol 20": 135,
+    "SFX Vol 40": 446,
+    "SFX Vol 60": 2365,
+    "SFX Vol 80": 1429,
+    "SFX Vol 99": 71,
+}
+SL_BUFFER_DEFAULT = 15   # respaldo para un símbolo nuevo aún no calibrado
+
+# ── Contexto macro — caché propio, independiente del de contexto_inicial.py ──
+REFRESH_MINUTOS_CTX = 60
+_contexto_nuevos     = {}   # {simbolo: ctx_dict}
+_ultimo_refresh_ctx  = 0
 
 
 def _clave(simbolo):
     return f"estructura_nueva_{simbolo}"
 
 
-def _calcular_sl_tp(precio_entrada, nivel_swing, es_venta, rr=RR_MINIMO):
+def _refrescar_contexto_si_necesario():
     """
-    SL = swing roto + buffer (venta) / swing roto - buffer (compra).
+    Calcula (o refresca cada 60 min) el contexto macro D1→H4→H1→M15
+    de los símbolos nuevos, reusando _calcular_contexto_simbolo()
+    de contexto_inicial.py. La primera llamada tarda ~30-50s
+    (10 símbolos x ~3-5s c/u) — pasa una sola vez al arrancar.
+    """
+    global _ultimo_refresh_ctx
+
+    ahora = time.time()
+    if _contexto_nuevos and (ahora - _ultimo_refresh_ctx) < REFRESH_MINUTOS_CTX * 60:
+        return
+
+    print("  📊 [Estructura nueva] Calculando contexto macro (FX Vol / SFX Vol)...")
+    for simbolo in SIMBOLOS_ESTRUCTURA_NUEVOS:
+        try:
+            _contexto_nuevos[simbolo] = _calcular_contexto_simbolo(simbolo)
+        except Exception as e:
+            print(f"  [Estructura nueva][contexto] Error en {simbolo}: {e}")
+
+    _ultimo_refresh_ctx = ahora
+    print("  ✅ [Estructura nueva] Contexto macro listo\n")
+
+
+def _calcular_sl_tp(simbolo, precio_entrada, nivel_swing, es_venta, rr=RR_MINIMO):
+    """
+    SL = swing roto + buffer calibrado (venta) / swing roto - buffer (compra).
+    El buffer viene de SL_MINIMO_NUEVOS (real, por símbolo) — respaldo
+    SL_BUFFER_DEFAULT si el símbolo aún no tiene calibración.
     TP con RR mínimo, mismo esquema que _calcular_tp de main_v5.py.
     """
+    buffer = SL_MINIMO_NUEVOS.get(simbolo, SL_BUFFER_DEFAULT)
+
     if es_venta:
-        sl = max(nivel_swing, precio_entrada) + SL_BUFFER
+        sl = max(nivel_swing, precio_entrada) + buffer
     else:
-        sl = min(nivel_swing, precio_entrada) - SL_BUFFER
+        sl = min(nivel_swing, precio_entrada) - buffer
 
     dist_sl = abs(precio_entrada - sl)
     if dist_sl <= 0:
@@ -108,10 +187,10 @@ def _calcular_sl_tp(precio_entrada, nivel_swing, es_venta, rr=RR_MINIMO):
     }
 
 
-def _mensaje(simbolo, es_venta, precio, tps, nivel_swing):
+def _mensaje(simbolo, es_venta, precio, tps, nivel_swing, ctx=None):
     icono  = '📉' if es_venta else '📈'
     accion = 'VENTA' if es_venta else 'COMPRA'
-    return '\n'.join([
+    lineas = [
         f"{icono} <b>SEÑAL ESTRUCTURA — {accion} | {simbolo}</b>",
         "━━━━━━━━━━━━━━━━━━",
         "📌 Tipo: CHoCH estructural (solo S/R, sin OB/FVG)",
@@ -122,9 +201,18 @@ def _mensaje(simbolo, es_venta, precio, tps, nivel_swing):
         f"🎯 TP2: {tps['tp2']:.0f}  RR {tps['rr'] * 1.5:.1f}:1",
         "━━━━━━━━━━━━━━━━━━",
         f"🔀 Swing roto: {nivel_swing:.0f}",
-        "⚠️ Índice sin calibración CSV — solo estructura pura.",
-        f"⏰ {datetime.now().strftime('%H:%M:%S')}",
-    ])
+    ]
+
+    # Contexto macro (bidireccional — sin "alineado", no aplica aquí)
+    if ctx and ctx.get('bias_general'):
+        pdh = f"PDH={ctx['pdh']:.0f}" if ctx.get('pdh') else 'PDH=?'
+        pdl = f"PDL={ctx['pdl']:.0f}" if ctx.get('pdl') else 'PDL=?'
+        rng = f" | Rango H1={ctx['rango_h1']:.0f}pts" if ctx.get('rango_h1') else ''
+        lineas.append(f"📊 Bias D1+H4+M15: {ctx['bias_general']} | {pdh} {pdl}{rng}")
+
+    lineas.append("⚠️ Solo estructura pura (S/R+CHoCH) — SL calibrado, sin OB/FVG todavía.")
+    lineas.append(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
+    return '\n'.join(lineas)
 
 
 def analizar_estructura_nuevos():
@@ -134,6 +222,8 @@ def analizar_estructura_nuevos():
     main_v5.py (esta función ya recorre su propia lista adentro,
     no hace falta ponerla dentro del for de SIMBOLOS principal).
     """
+    _refrescar_contexto_si_necesario()
+
     for simbolo in SIMBOLOS_ESTRUCTURA_NUEVOS:
         try:
             df_m5 = obtener_df(simbolo, TF_M5, VELAS_M5)
@@ -160,11 +250,14 @@ def analizar_estructura_nuevos():
             precio_entrada = float(df_m5['close'].iloc[-1])
             es_venta       = choch['direccion'] == 'bajista'
 
-            tps = _calcular_sl_tp(precio_entrada, choch['nivel'], es_venta)
+            tps = _calcular_sl_tp(simbolo, precio_entrada, choch['nivel'], es_venta)
             if not tps or tps['rr'] < RR_MINIMO:
                 continue
 
-            msg = _mensaje(simbolo, es_venta, precio_entrada, tps, choch['nivel'])
+            msg = _mensaje(
+                simbolo, es_venta, precio_entrada, tps, choch['nivel'],
+                ctx=_contexto_nuevos.get(simbolo),
+            )
             enviar_telegram(msg)
             registrar_envio(clave)
 
