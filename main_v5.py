@@ -131,6 +131,14 @@ RR_MINIMO       = 2.0    # ratio mínimo riesgo:beneficio
 DIST_ZONA       = 10     # pts antes de zona para alerta temprana
 TOQUES_MINIMOS  = 2      # toques históricos mínimos para zona válida
 SCORE_ZONA_MIN  = 3      # score mínimo de zona para considerar válida
+
+# ── Validación de metodología (24-ago-2026) ─────────────────
+# Mientras se valida la calidad de TIPO1 (zona real D1+H4+H1 +
+# CHoCH confirmado en M5 — la metodología "correcta": resistencia
+# fuerte + rechazo + giro confirmado), los otros 4 tipos quedan
+# apagados. Es reversible: poner en False reactiva todo tal cual
+# estaba (INSTITUCIONAL, TIPO1_M1, TIPO1_OB, TIPO2).
+SOLO_TIPO1_ACTIVO = True
 CICLO_ZONAS_SEG = 900    # recalcular zonas cada 15 minutos
 
 
@@ -238,6 +246,14 @@ def _resistencias_en_camino(simbolo, precio_entrada, tp1, es_bajista):
 # ============================================================
 
 def _detectar_choch_en_zona(simbolo, es_bajista, zonas_validas):
+    """
+    TIPO1 — la metodología principal: zona fuerte (D1+H4+H1) +
+    CHoCH confirmado en M5. Los sintéticos reaccionan rápido en
+    las zonas fuertes — M5 captura el giro a tiempo, sin esperar
+    a que el precio ya se haya movido (M15 confirma tarde). Lo
+    que filtra el ruido es la exigencia de la ZONA (score≥3,
+    ≥2 toques, combinando D1+H4+H1), no la temporalidad del CHoCH.
+    """
     df_m5 = obtener_df(simbolo, TF_M5, VELAS_M5)
     if df_m5 is None or len(df_m5) < 20:
         return {'detectado': False}
@@ -552,28 +568,29 @@ def analizar_simbolo(simbolo):
         return {'simbolo': simbolo, 'resultado': 'COOLDOWN', 'precio': precio_actual}
 
     # ── 7.5 Setup INSTITUCIONAL (sweep + FVG + CHoCH M1) ─────
-    setup_inst = evaluar_setup_institucional(simbolo, precio_actual)
-    if setup_inst['detectado']:
-        precio_entrada = setup_inst['entrada']
-        sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, simbolo)
-        tps = _calcular_tp(precio_entrada, sl, es_bajista)
-        if tps['rr'] >= RR_MINIMO:
-            enviar_telegram(setup_inst['descripcion'])
-            registrar_envio(clave_señal)
-            registrar_trade(
-                simbolo=simbolo, es_bajista=es_bajista,
-                precio_entrada=precio_entrada, sl=sl,
-                tp1=tps['tp1'], tp2=tps['tp2'],
-                score_poi=0, trigger='INSTITUCIONAL',
-            )
-            return {
-                'simbolo': simbolo, 'resultado': 'SEÑAL',
-                'tipo': 'INSTITUCIONAL', 'precio': precio_entrada,
-                'sl': sl, 'tps': tps,
-            }
+    if not SOLO_TIPO1_ACTIVO:
+        setup_inst = evaluar_setup_institucional(simbolo, precio_actual)
+        if setup_inst['detectado']:
+            precio_entrada = setup_inst['entrada']
+            sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, simbolo)
+            tps = _calcular_tp(precio_entrada, sl, es_bajista)
+            if tps['rr'] >= RR_MINIMO:
+                enviar_telegram(setup_inst['descripcion'])
+                registrar_envio(clave_señal)
+                registrar_trade(
+                    simbolo=simbolo, es_bajista=es_bajista,
+                    precio_entrada=precio_entrada, sl=sl,
+                    tp1=tps['tp1'], tp2=tps['tp2'],
+                    score_poi=0, trigger='INSTITUCIONAL',
+                )
+                return {
+                    'simbolo': simbolo, 'resultado': 'SEÑAL',
+                    'tipo': 'INSTITUCIONAL', 'precio': precio_entrada,
+                    'sl': sl, 'tps': tps,
+                }
 
     # ── 8. Señal TIPO1_M1 — CHoCH M1 en zona + sweep ────────
-    if choch_m1['detectado'] and sweep['hubo_sweep'] and pd_ctx.get('valid', True):
+    if not SOLO_TIPO1_ACTIVO and choch_m1['detectado'] and sweep['hubo_sweep'] and pd_ctx.get('valid', True):
         precio_entrada = choch_m1['precio']
         sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, simbolo)
         tps = _calcular_tp(precio_entrada, sl, es_bajista)
@@ -641,7 +658,7 @@ def analizar_simbolo(simbolo):
     # ── 10. Señal TIPO1_OB — OB H1 + sweep (NUEVO v6.1) ─────
     señal_ob = _detectar_ob_h1_activo(simbolo, es_bajista, obs, sweep)
 
-    if señal_ob['detectado'] and pd_ctx.get('valid', True):
+    if not SOLO_TIPO1_ACTIVO and señal_ob['detectado'] and pd_ctx.get('valid', True):
         precio_entrada = señal_ob['precio']
         sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, simbolo)
         tps = _calcular_tp(precio_entrada, sl, es_bajista)
@@ -672,6 +689,9 @@ def analizar_simbolo(simbolo):
             }
 
     # ── 11. Señal TIPO2 — BOS + retroceso ───────────────────
+    if SOLO_TIPO1_ACTIVO:
+        return {'simbolo': simbolo, 'resultado': 'SIN_SEÑAL', 'precio': precio_actual}
+
     señal = _detectar_bos_retroceso(simbolo, es_bajista)
 
     if not señal['detectado']:
