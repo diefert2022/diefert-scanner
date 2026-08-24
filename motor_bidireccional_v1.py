@@ -6,7 +6,8 @@
 #  pero evaluando AMBAS direcciones — porque FlipX no tiene
 #  lado fijo como PainX=venta/GainX=compra.
 #
-#  ⚠️ ALCANCE ACTUAL (24-ago-2026): solo FlipX 1-5. Los índices
+#  ⚠️ ALCANCE ACTUAL (24-ago-2026): FlipX 1-5, ya calibrado con
+#  datos reales (actualizar_perfiles_flipx_v1.py). Los índices
 #  FX Vol/SFX Vol se sacaron de este motor por ahora (mucho
 #  volumen de señales mientras se estabilizaba P/G) — quedan
 #  en PERFIL_NUEVOS comentados más abajo por si se retoman.
@@ -134,7 +135,12 @@ PERFIL_NUEVOS = {
     # "SFX Vol 80": {"sl_minimo": 1429, "rango_diario": 20685, "rango_m15": 1152, "ob_h4_min": 5321, "ob_h1_min": 2598, "fvg_bull_fuerte": 597, "fvg_bear_fuerte": 579, "rango_saturado": 18616},
     # "SFX Vol 99": {"sl_minimo": 71,   "rango_diario": 889,   "rango_m15": 51,   "ob_h4_min": 210,  "ob_h1_min": 111,  "fvg_bull_fuerte": 26,  "fvg_bear_fuerte": 25,  "rango_saturado": 800},
     #
-    # FlipX 1-5 — esperando calibración (actualizar_perfiles_flipx_v1.py):
+    # FlipX 1-5 — calibrado real (actualizar_perfiles_flipx_v1.py, 24-ago-2026):
+    "FlipX 1": {"sl_minimo": 58,  "rango_diario": 630,  "rango_m15": 47,  "ob_h4_min": 161, "ob_h1_min": 87,  "fvg_bull_fuerte": 18, "fvg_bear_fuerte": 17, "rango_saturado": 567},
+    "FlipX 2": {"sl_minimo": 85,  "rango_diario": 981,  "rango_m15": 74,  "ob_h4_min": 275, "ob_h1_min": 136, "fvg_bull_fuerte": 28, "fvg_bear_fuerte": 28, "rango_saturado": 883},
+    "FlipX 3": {"sl_minimo": 113, "rango_diario": 1496, "rango_m15": 101, "ob_h4_min": 384, "ob_h1_min": 187, "fvg_bull_fuerte": 37, "fvg_bear_fuerte": 36, "rango_saturado": 1346},
+    "FlipX 4": {"sl_minimo": 140, "rango_diario": 1637, "rango_m15": 127, "ob_h4_min": 462, "ob_h1_min": 230, "fvg_bull_fuerte": 47, "fvg_bear_fuerte": 45, "rango_saturado": 1473},
+    "FlipX 5": {"sl_minimo": 171, "rango_diario": 2217, "rango_m15": 156, "ob_h4_min": 589, "ob_h1_min": 291, "fvg_bull_fuerte": 58, "fvg_bear_fuerte": 58, "rango_saturado": 1995},
 }
 
 # ── Parámetros generales (scale-invariant, mismos que main_v5.py) ──

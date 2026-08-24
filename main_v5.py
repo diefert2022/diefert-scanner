@@ -111,6 +111,9 @@ from emascalpd_v1 import analizar_emascalpd
 # ── Patrones Armónicos PCI (v1 — señal independiente, solo seguimiento) ──
 from harmonicos_v1 import analizar_patron_armonico
 
+# ── Motor bidireccional para FlipX (v1 — zonas+FVG+OB+CHoCH/BOS) ──
+from motor_bidireccional_v1 import analizar_indices_bidireccionales
+
 # ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
 from spike_hunter_v1 import cazar_spikes
 # ═══ FIN BLOQUE COMPETENCIA ═══
@@ -832,6 +835,14 @@ def iniciar_v5():
                 # ciclo) para que el watchdog detecte un cuelgue rapido,
                 # incluso si se congela a mitad de un ciclo largo.
                 _latido()
+
+            # ── Motor completo bidireccional (FlipX) ─────────────────────
+            # Módulo 100% independiente — no toca el motor TIPO1/TIPO1_OB/TIPO2.
+            # Ver motor_bidireccional_v1.py para el detalle completo.
+            try:
+                analizar_indices_bidireccionales()
+            except Exception as e_motor_bidir:
+                print(f"  [Motor bidireccional] ERROR general: {e_motor_bidir}")
 
             # Panel cada 10 ciclos
             if ciclo % 10 == 0:
