@@ -133,12 +133,21 @@ TOQUES_MINIMOS  = 2      # toques históricos mínimos para zona válida
 SCORE_ZONA_MIN  = 3      # score mínimo de zona para considerar válida
 
 # ── Validación de metodología (24-ago-2026) ─────────────────
-# Mientras se valida la calidad de TIPO1 (zona real D1+H4+H1 +
-# CHoCH confirmado en M5 — la metodología "correcta": resistencia
-# fuerte + rechazo + giro confirmado), los otros 4 tipos quedan
-# apagados. Es reversible: poner en False reactiva todo tal cual
-# estaba (INSTITUCIONAL, TIPO1_M1, TIPO1_OB, TIPO2).
+# TIPO1 (zona real D1+H4+H1 + CHoCH M5) queda como principal.
+# TIPO2 (BOS + retroceso, tipo scalping) también sigue activo,
+# pero con SU PROPIA gestión de riesgo — ver _calcular_sl_tp_scalping.
+# INSTITUCIONAL, TIPO1_M1 y TIPO1_OB siguen apagados.
 SOLO_TIPO1_ACTIVO = True
+
+# ── Gestión de riesgo — TIPO2 (scalping, distinta a TIPO1) ──
+# SL pegado a la estructura real (justo detrás del OB que originó
+# el BOS), no al SL grande calibrado de swing. RR más permisivo:
+# acepta desde 1:1 (ej. arriesgar 10pts, ganar 10-20pts), no exige
+# 1:2 como TIPO1.
+BUFFER_SCALPING    = 5     # pts extra más allá del OB, de colchón
+RR_MINIMO_SCALPING = 1.0   # acepta desde 1:1
+RR_TP1_SCALPING    = 1.0
+RR_TP2_SCALPING    = 2.0
 CICLO_ZONAS_SEG = 900    # recalcular zonas cada 15 minutos
 
 
@@ -218,6 +227,40 @@ def _calcular_tp(precio_entrada, sl, es_bajista, rr=RR_MINIMO):
         'sl':      sl,
         'dist_sl': round(dist_sl, 0),
         'rr':      rr_real,
+    }
+
+
+def _calcular_sl_tp_scalping(es_bajista, precio_entrada, ob_high, ob_low):
+    """
+    SL/TP para TIPO2 — gestión de riesgo de scalping, distinta a
+    TIPO1. El SL va justo detrás del Order Block que originó el
+    BOS (+ un colchón pequeño), no del SL grande calibrado de swing.
+    Con eso el riesgo queda proporcional a la estructura real de la
+    entrada, normalmente bastante más chico que el de TIPO1 — ej.
+    arriesgar ~10pts para buscar 10-20pts, no 70-90pts de swing.
+    """
+    if es_bajista:
+        sl = ob_high + BUFFER_SCALPING
+    else:
+        sl = ob_low - BUFFER_SCALPING
+
+    dist_sl = abs(precio_entrada - sl)
+    if dist_sl <= 0:
+        return None
+
+    if es_bajista:
+        tp1 = precio_entrada - dist_sl * RR_TP1_SCALPING
+        tp2 = precio_entrada - dist_sl * RR_TP2_SCALPING
+    else:
+        tp1 = precio_entrada + dist_sl * RR_TP1_SCALPING
+        tp2 = precio_entrada + dist_sl * RR_TP2_SCALPING
+
+    return {
+        'sl':      round(sl, 2),
+        'tp1':     round(tp1, 2),
+        'tp2':     round(tp2, 2),
+        'dist_sl': round(dist_sl, 0),
+        'rr':      RR_TP1_SCALPING,
     }
 
 
@@ -688,23 +731,20 @@ def analizar_simbolo(simbolo):
                 'sl': sl, 'tps': tps,
             }
 
-    # ── 11. Señal TIPO2 — BOS + retroceso ───────────────────
-    if SOLO_TIPO1_ACTIVO:
-        return {'simbolo': simbolo, 'resultado': 'SIN_SEÑAL', 'precio': precio_actual}
-
+    # ── 11. Señal TIPO2 — BOS + retroceso (scalping) ────────
     señal = _detectar_bos_retroceso(simbolo, es_bajista)
 
     if not señal['detectado']:
         return {'simbolo': simbolo, 'resultado': 'SIN_SEÑAL', 'precio': precio_actual}
 
     precio_entrada = señal['precio']
-    sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, simbolo)
-    tps = _calcular_tp(precio_entrada, sl, es_bajista)
+    tps = _calcular_sl_tp_scalping(es_bajista, precio_entrada, señal['ob_high'], señal['ob_low'])
 
-    if tps['rr'] < RR_MINIMO:
-        print(f"  ⛔ RR insuficiente | {simbolo} | RR={tps['rr']} < {RR_MINIMO}")
+    if not tps or tps['rr'] < RR_MINIMO_SCALPING:
+        print(f"  ⛔ RR insuficiente (scalping) | {simbolo}")
         return {'simbolo': simbolo, 'resultado': 'RR_INSUFICIENTE', 'precio': precio_actual}
 
+    sl = tps['sl']
     res_camino = _resistencias_en_camino(simbolo, precio_entrada, tps['tp1'], es_bajista)
     msg = _construir_mensaje(
         simbolo=simbolo, es_bajista=es_bajista,

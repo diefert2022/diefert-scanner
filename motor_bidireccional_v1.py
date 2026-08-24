@@ -150,12 +150,18 @@ TOQUES_MINIMOS  = 2      # zona válida necesita ≥2 toques (cuenta, no pts)
 SCORE_ZONA_MIN  = 3      # zona válida necesita score ≥3 (cuenta, no pts)
 
 # ── Validación de metodología (24-ago-2026) ─────────────────
-# Mismo criterio que main_v5.py: mientras se valida la calidad
-# de la zona real (D1+H4+H1) + CHoCH confirmado en M5, se apagan
-# TIPO1_OB y TIPO2 acá también. Reversible: poner en False
-# reactiva los 3 tipos tal cual estaban.
+# Mismo criterio que main_v5.py: TIPO1 (zona real D1+H4+H1 +
+# CHoCH M5) es el principal. TIPO2 (BOS + retroceso, scalping)
+# también sigue activo, con su PROPIA gestión de riesgo — ver
+# _calcular_sl_tp_scalping. TIPO1_OB sigue apagado.
 SOLO_TIPO1_ACTIVO = True
 INTERVALO_ZONAS_SEG = 900   # recalcular zonas cada 15 min, igual que resistencias.py
+
+# ── Gestión de riesgo — TIPO2 (scalping, distinta a TIPO1) ──
+BUFFER_SCALPING    = 5     # pts extra más allá del OB, de colchón
+RR_MINIMO_SCALPING = 1.0   # acepta desde 1:1
+RR_TP1_SCALPING    = 1.0
+RR_TP2_SCALPING    = 2.0
 
 # ── Contexto macro — caché propio, independiente de contexto_inicial.py ──
 REFRESH_MINUTOS_CTX = 60
@@ -459,6 +465,34 @@ def _calcular_tp(precio_entrada, sl, es_bajista, rr=RR_MINIMO):
     }
 
 
+def _calcular_sl_tp_scalping(es_bajista, precio_entrada, ob_high, ob_low):
+    """
+    SL/TP para TIPO2 — gestión de riesgo de scalping, distinta a
+    TIPO1. SL justo detrás del OB que originó el BOS (+ colchón
+    chico), RR desde 1:1 — mismo criterio que main_v5.py.
+    """
+    if es_bajista:
+        sl = ob_high + BUFFER_SCALPING
+    else:
+        sl = ob_low - BUFFER_SCALPING
+
+    dist_sl = abs(precio_entrada - sl)
+    if dist_sl <= 0:
+        return None
+
+    if es_bajista:
+        tp1 = precio_entrada - dist_sl * RR_TP1_SCALPING
+        tp2 = precio_entrada - dist_sl * RR_TP2_SCALPING
+    else:
+        tp1 = precio_entrada + dist_sl * RR_TP1_SCALPING
+        tp2 = precio_entrada + dist_sl * RR_TP2_SCALPING
+
+    return {
+        'sl': round(sl, 2), 'tp1': round(tp1, 2), 'tp2': round(tp2, 2),
+        'dist_sl': round(dist_sl, 0), 'rr': RR_TP1_SCALPING,
+    }
+
+
 def _construir_mensaje(simbolo, es_bajista, precio, tps, señal, ctx=None):
     icono  = '📉' if es_bajista else '📈'
     accion = 'VENTA' if es_bajista else 'COMPRA'
@@ -542,7 +576,7 @@ def analizar_indices_bidireccionales():
             señal = _detectar_choch_en_zona(zonas_validas, df_m5, esc)
             if not señal['detectado'] and not SOLO_TIPO1_ACTIVO:
                 señal = _detectar_ob_h1_activo(simbolo, perfil, esc)
-            if not señal['detectado'] and not SOLO_TIPO1_ACTIVO:
+            if not señal['detectado']:
                 señal = _detectar_bos_retroceso(simbolo)
             if not señal['detectado']:
                 continue
@@ -550,10 +584,15 @@ def analizar_indices_bidireccionales():
             es_bajista     = señal['es_bajista']
             precio_entrada = float(señal['precio'])
 
-            sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, perfil)
-            tps = _calcular_tp(precio_entrada, sl, es_bajista)
-            if not tps or tps['rr'] < RR_MINIMO:
-                continue
+            if señal['tipo'] == 'TIPO2':
+                tps = _calcular_sl_tp_scalping(es_bajista, precio_entrada, señal['ob_high'], señal['ob_low'])
+                if not tps or tps['rr'] < RR_MINIMO_SCALPING:
+                    continue
+            else:
+                sl  = _calcular_sl(df_m5, precio_entrada, es_bajista, perfil)
+                tps = _calcular_tp(precio_entrada, sl, es_bajista)
+                if not tps or tps['rr'] < RR_MINIMO:
+                    continue
 
             msg = _construir_mensaje(
                 simbolo, es_bajista, precio_entrada, tps, señal,
