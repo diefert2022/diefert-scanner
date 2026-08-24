@@ -1,15 +1,14 @@
 @echo off
-title Diefert Scanner v5 (con watchdog)
+title Diefert Scanner v5
 cd /d "F:\clude\diefert_scanner_v5"
 echo ============================================
-echo   Diefert Scanner v5 - iniciando con watchdog
-echo   Si el scanner se cuelga, se reiniciara solo.
-echo   Para detenerlo del todo: cierra esta ventana
+echo   Diefert Scanner v5 - iniciando
+echo   Para detenerlo: cierra esta ventana
 echo   o presiona Ctrl+C.
 echo ============================================
 echo.
-python watchdog.py
+python main_v5.py
 
 echo.
-echo El watchdog se detuvo. Presiona una tecla para cerrar.
+echo El scanner se detuvo. Presiona una tecla para cerrar.
 pause >nul
