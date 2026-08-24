@@ -1,5 +1,31 @@
 # ============================================================
-#  DIEFERT SCANNER v4.7 — config.py
+#  DIEFERT SCANNER v4.10 — config.py
+#
+#  CAMBIOS v4.10 (09-ago-2026 — actualización automática):
+#  ─────────────────────────────────────────────────────────
+#  [~] Perfiles de los 10 índices recalibrados con datos
+#      reales de MT5 (3 meses, generado por
+#      actualizar_perfiles_indices.py). Se actualizaron:
+#      sl_minimo, rango_diario, rango_m15, ob_h4_min,
+#      ob_h1_min, fvg_bull_fuerte, fvg_bear_fuerte,
+#      horas_activas_utc, rango_saturado.
+#  [i] es_bajista NO se tocó — se mantiene la regla fija
+#      (PainX=True/venta, GainX=False/compra) sin importar
+#      el sesgo medido en las velas recientes.
+#  [i] tol_h1, tol_h4, reac_avg_h1, ob_maestro_low/high NO
+#      se recalculan con este script — quedan igual que antes.
+#  RESUMEN NUEVO (ago 2026, P90 Daily / avg M15 / SL):
+#  ─────────────────────────────────────────────────────────
+#  PainX 400:    847   51   70
+#  PainX 600:    839   50   70
+#  PainX 800:    550   33   54
+#  PainX 999:    866   48   75
+#  PainX 1200:   432   25   44
+#  GainX 400:    836   51   72
+#  GainX 600:    808   50   71
+#  GainX 800:    554   34   53
+#  GainX 999:    787   47   73
+#  GainX 1200:   464   25   45
 #
 #  CAMBIOS v4.8:
 #  ─────────────────────────────────────────────────────────
@@ -126,26 +152,18 @@ COOLDOWN_SEG     = 300
 COOLDOWN_EMA_SEG = 180
 
 # ── SL MÍNIMO POR ÍNDICE ──────────────────────────────────
-# Calibrado: p90 rango M15 + 5 pts buffer.
-#
-#   PainX 400:  p90=~78 → SL 74pts
-#   PainX 600:  p90= 78 → SL 75pts
-#   PainX 800:  p90= 54 → SL 59pts
-#   PainX 999:  p90= 80 → SL 85pts  ← más volátil
-#   PainX 1200: p90= 44 → SL 49pts  ← mueve menos
-#   GainX 400:  p90=~78 → SL 74pts
-#   GainX 1200: p90=~28 → SL 48pts
+# Recalibrado 09-ago-2026: promedio cuerpo H1 (3 meses) + 10 buffer.
 SL_MINIMO = {
-    "PainX 400":  74,
-    "PainX 600":  75,
-    "PainX 800":  59,
-    "PainX 999":  85,
-    "PainX 1200": 49,   # p90 M15=44 + 5 buffer (dato real)
-    "GainX 400":  74,
-    "GainX 600":  75,   # p90 M15 calibrado | análisis mayo 2026
-    "GainX 800":  59,   # p90 M15=54 + 5 buffer (dato real)
-    "GainX 999":  85,   # igual a PainX 999 (mismo rango diario)
-    "GainX 1200": 48,
+    "PainX 400":  70,
+    "PainX 600":  70,
+    "PainX 800":  54,
+    "PainX 999":  75,
+    "PainX 1200": 44,
+    "GainX 400":  72,
+    "GainX 600":  71,
+    "GainX 800":  53,
+    "GainX 999":  73,
+    "GainX 1200": 45,
 }
 SL_MINIMO_DEFAULT = 60
 
@@ -179,10 +197,9 @@ TOL_M15_ZONA_DEFAULT  = 40
 
 # ── COMPORTAMIENTO POR ÍNDICE ─────────────────────────────
 INDICE_CONFIG = {
-    # ── PainX 400 — ACTUALIZADO v4.8 ──────────────────────
-    # Daily=577 | M15=51 | SL=74 | BEAR 53.6% Monthly
-    # FVG bear prom=48pts > bull prom=34pts (fuerza bajista)
-    # Horas top: 06,09,15,16 UTC | RSI invertido (>70=SELL)
+    # ── PainX 400 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=847 | M15=51 | SL=70 | recalibrado 3 meses reales
+    # es_bajista se mantiene True (regla fija de venta, no bias medido)
     # ──────────────────────────────────────────────────────
     "PainX 400": {
         "es_bajista":        True,
@@ -192,101 +209,125 @@ INDICE_CONFIG = {
         "tol_h1":            150,
         "tol_h4":            250,
         "reac_avg_h1":       200,
-        "sl_minimo":         74,
-        "rango_diario":      577,
+        "sl_minimo":         70,
+        "rango_diario":      847,
         "rango_m15":         51,
-        "ob_h4_min":         217,      # P85 cuerpos H4 real (CSV 872 velas)
+        "ob_h4_min":         216,      # P85 cuerpos H4 real (ago 2026)
         "ob_h1_min":         110,      # P85 cuerpos H1 real
-        "fvg_bull_fuerte":   34,       # avg real FVG alcistas M15
-        "fvg_bear_fuerte":   48,       # avg real FVG bajistas M15 (MAYOR)
-        "horas_activas_utc": [6,7,8,9,15,16,17,20],
-        "rango_saturado":    520,      # 90% rango diario — no entrar si ya se movió
+        "fvg_bull_fuerte":   20,       # avg real FVG alcistas M15
+        "fvg_bear_fuerte":   26,       # avg real FVG bajistas M15
+        "horas_activas_utc": [4,5,12,15,20,21,22,23],
+        "rango_saturado":    762,      # 90% rango diario — no entrar si ya se movió
     },
-    # ── PainX 600 — v4.2 ──────────────────────────────────
-    # Daily=592 | M15=50 | SL=75 | FVGs H4: 417 (avg 111pts)
+    # ── PainX 600 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=839 | M15=50 | SL=70 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "PainX 600": {
-        "es_bajista":    True,
-        "usar_fvg":      True,
-        "usar_ob":       True,
-        "usar_swinglow": False,
-        "tol_h1":        120,
-        "tol_h4":        200,
-        "reac_avg_h1":   160,
-        "sl_minimo":     75,
-        "rango_diario":  592,
-        "rango_m15":     50,
+        "es_bajista":        True,
+        "usar_fvg":          True,
+        "usar_ob":           True,
+        "usar_swinglow":     False,
+        "tol_h1":            120,
+        "tol_h4":            200,
+        "reac_avg_h1":       160,
+        "sl_minimo":         70,
+        "rango_diario":      839,
+        "rango_m15":         50,
+        "ob_h4_min":         211,
+        "ob_h1_min":         107,
+        "fvg_bull_fuerte":   20,
+        "fvg_bear_fuerte":   29,
+        "horas_activas_utc": [0,1,10,12,13,15,16,17],
+        "rango_saturado":    755,
     },
-    # ── PainX 800 — v4.3 ──────────────────────────────────
-    # Daily=406 | M15=33 | SL=59 | EMAs H4=11% (más selectivo)
+    # ── PainX 800 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=550 | M15=33 | SL=54 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "PainX 800": {
-        "es_bajista":    True,
-        "usar_fvg":      True,
-        "usar_ob":       True,
-        "usar_swinglow": False,
-        "tol_h1":        86,
-        "tol_h4":        160,
-        "reac_avg_h1":   110,
-        "sl_minimo":     59,
-        "rango_diario":  406,
-        "rango_m15":     33,
+        "es_bajista":        True,
+        "usar_fvg":          True,
+        "usar_ob":           True,
+        "usar_swinglow":     False,
+        "tol_h1":            86,
+        "tol_h4":            160,
+        "reac_avg_h1":       110,
+        "sl_minimo":         54,
+        "rango_diario":      550,
+        "rango_m15":         33,
+        "ob_h4_min":         157,
+        "ob_h1_min":         75,
+        "fvg_bull_fuerte":   14,
+        "fvg_bear_fuerte":   21,
+        "horas_activas_utc": [2,3,4,5,13,19,20,23],
+        "rango_saturado":    495,
     },
-    # ── PainX 999 — v4.4 ──────────────────────────────────
-    # Daily=607 | M15=48 | SL=85 | FVGs H4 más grandes (115pts)
-    # OBs más fuertes (254pts) | Mejor día: mié(54%) y jue(51%)
+    # ── PainX 999 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=866 | M15=48 | SL=75 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "PainX 999": {
-        "es_bajista":    True,
-        "usar_fvg":      True,
-        "usar_ob":       True,
-        "usar_swinglow": False,
-        "tol_h1":        122,
-        "tol_h4":        240,
-        "reac_avg_h1":   170,
-        "sl_minimo":     85,
-        "rango_diario":  607,
-        "rango_m15":     48,
+        "es_bajista":        True,
+        "usar_fvg":          True,
+        "usar_ob":           True,
+        "usar_swinglow":     False,
+        "tol_h1":            122,
+        "tol_h4":            240,
+        "reac_avg_h1":       170,
+        "sl_minimo":         75,
+        "rango_diario":      866,
+        "rango_m15":         48,
+        "ob_h4_min":         236,
+        "ob_h1_min":         113,
+        "fvg_bull_fuerte":   21,
+        "fvg_bear_fuerte":   33,
+        "horas_activas_utc": [7,9,10,11,14,18,19,21],
+        "rango_saturado":    779,
     },
-    # ── PainX 1200 — v4.5 ─────────────────────────────────
-    # Daily=330 | M15=25 | SL=49 | EMAs H4=35% ← más frecuente
-    # Winrate setup SHORT = 52% ← mejor de la familia
-    # Muy similar a GainX 1200 en comportamiento (espejo bajista)
-    # FVGs H4: 501 (avg 60pts) | OBs: 459 (impulso 135pts)
-    # CHoCH M15: break avg=57pts | Mejor día: vie(56%) mar(52%)
+    # ── PainX 1200 — ACTUALIZADO v4.10 (09-ago-2026) ──────
+    # Daily(P90)=432 | M15=25 | SL=44 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "PainX 1200": {
-        "es_bajista":    True,
-        "usar_fvg":      True,   # 501 FVGs H4 (avg 60 pts)
-        "usar_ob":       True,   # 459 OBs H4 (impulso avg 135 pts)
-        "usar_swinglow": False,
-        "tol_h1":        70,     # H1 avg=60 + 10 buffer
-        "tol_h4":        130,    # H4 avg=130 → buffer mínimo
-        "reac_avg_h1":   90,     # reacción esperada H1
-        "sl_minimo":     49,     # p90 M15=44 + 5 buffer
-        "rango_diario":  330,    # dato real histórico
-        "rango_m15":     25,     # dato real histórico avg
+        "es_bajista":        True,
+        "usar_fvg":          True,
+        "usar_ob":           True,
+        "usar_swinglow":     False,
+        "tol_h1":            70,     # H1 avg=60 + 10 buffer
+        "tol_h4":            130,    # H4 avg=130 → buffer mínimo
+        "reac_avg_h1":       90,     # reacción esperada H1
+        "sl_minimo":         44,
+        "rango_diario":      432,
+        "rango_m15":         25,
+        "ob_h4_min":         118,
+        "ob_h1_min":         59,
+        "fvg_bull_fuerte":   11,
+        "fvg_bear_fuerte":   18,
+        "horas_activas_utc": [1,7,8,11,13,17,18,21],
+        "rango_saturado":    389,
     },
-    # ── GainX 400 ─────────────────────────────────────────
-    # Daily=580 | M15=52 | SL=74 | espejo alcista PainX 400
+    # ── GainX 400 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=836 | M15=51 | SL=72 | recalibrado 3 meses reales
+    # es_bajista se mantiene False (regla fija de compra, no bias medido)
     # ──────────────────────────────────────────────────────
     "GainX 400": {
-        "es_bajista":    False,
-        "usar_fvg":      True,
-        "usar_ob":       True,
-        "usar_swinglow": False,
-        "tol_h1":        150,
-        "tol_h4":        250,
-        "reac_avg_h1":   200,
-        "sl_minimo":     74,
-        "rango_diario":  580,
-        "rango_m15":     52,
+        "es_bajista":        False,
+        "usar_fvg":          True,
+        "usar_ob":           True,
+        "usar_swinglow":     False,
+        "tol_h1":            150,
+        "tol_h4":            250,
+        "reac_avg_h1":       200,
+        "sl_minimo":         72,
+        "rango_diario":      836,
+        "rango_m15":         51,
+        "ob_h4_min":         225,
+        "ob_h1_min":         110,
+        "fvg_bull_fuerte":   28,
+        "fvg_bear_fuerte":   20,
+        "horas_activas_utc": [1,4,5,7,10,11,12,23],
+        "rango_saturado":    752,
     },
-    # ── GainX 600 — ACTUALIZADO v4.8 ──────────────────────
-    # Daily=587 | M15=50 | SL=75 | BULL 59% Monthly
-    # OB MAESTRO: 110,320–110,420 (H4+H1+M30+M15 confluyen)
-    # M1 mecánico dientes sierra 20-35pts → CHoCH preciso
-    # Ciclos M30 amplitud 600-900pts muy definidos
+    # ── GainX 600 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=808 | M15=50 | SL=71 | recalibrado 3 meses reales
+    # OB MAESTRO histórico se conserva como referencia informativa
     # ──────────────────────────────────────────────────────
     "GainX 600": {
         "es_bajista":        False,
@@ -296,80 +337,69 @@ INDICE_CONFIG = {
         "tol_h1":            120,
         "tol_h4":            200,
         "reac_avg_h1":       160,
-        "sl_minimo":         75,
-        "rango_diario":      587,      # dato real CSV (690 velas Daily)
+        "sl_minimo":         71,
+        "rango_diario":      808,
         "rango_m15":         50,
-        "ob_h4_min":         232,      # P85 cuerpos H4 real
-        "ob_h1_min":         108,      # P85 cuerpos H1 real
-        "fvg_bull_fuerte":   45,       # avg real FVG alcistas M15
-        "fvg_bear_fuerte":   33,       # avg real FVG bajistas M15
-        "horas_activas_utc": [9,10,11,12,13,14,15,16],
-        "rango_saturado":    528,      # 90% rango diario
-        "ob_maestro_low":    110320,   # OB institucional H4+H1+M30+M15
+        "ob_h4_min":         214,      # P85 cuerpos H4 real (ago 2026)
+        "ob_h1_min":         111,      # P85 cuerpos H1 real
+        "fvg_bull_fuerte":   29,       # avg real FVG alcistas M15
+        "fvg_bear_fuerte":   20,       # avg real FVG bajistas M15
+        "horas_activas_utc": [4,5,7,8,9,10,15,21],
+        "rango_saturado":    727,      # 90% rango diario
+        "ob_maestro_low":    110320,   # OB institucional histórico (referencia)
         "ob_maestro_high":   110420,   # zona de máxima confluencia
     },
-    # ── GainX 999 — NUEVO v4.9 ───────────────────────────
-    # Daily=611 | M15=47 | SL=85 | BEAR 59.1% Monthly
-    # El más bajista de los GainX — comportamiento igual a PainX
-    # FVG bull 49pts = más grande de toda la familia (rebotes explosivos)
-    # Horas activas: Londres 12-16 UTC + nocturno 22 UTC
+    # ── GainX 999 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=787 | M15=47 | SL=73 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "GainX 999": {
-        "es_bajista":        False,    # en SIMBOLOS_ALCISTAS pero bear de facto
+        "es_bajista":        False,    # regla fija — GainX siempre compra
         "usar_fvg":          True,
         "usar_ob":           True,
         "usar_swinglow":     False,
         "tol_h1":            122,
         "tol_h4":            240,
         "reac_avg_h1":       170,
-        "sl_minimo":         85,       # igual a PainX 999 (mismo rango)
-        "rango_diario":      611,      # dato real CSV (690 velas)
+        "sl_minimo":         73,
+        "rango_diario":      787,
         "rango_m15":         47,
-        "ob_h4_min":         239,      # P85 cuerpos H4 real
-        "ob_h1_min":         113,      # P85 cuerpos H1 real
-        "fvg_bull_fuerte":   49,       # mayor de toda la familia
-        "fvg_bear_fuerte":   30,
-        "horas_activas_utc": [7,10,12,14,15,16,18,22],
-        "rango_saturado":    550,      # 611 * 0.9
-        "ob_maestro_low":    83218,    # mínimo del ciclo mayo 2026
+        "ob_h4_min":         219,      # P85 cuerpos H4 real (ago 2026)
+        "ob_h1_min":         112,      # P85 cuerpos H1 real
+        "fvg_bull_fuerte":   32,
+        "fvg_bear_fuerte":   22,
+        "horas_activas_utc": [1,2,6,8,11,12,17,22],
+        "rango_saturado":    708,      # 90% rango diario
+        "ob_maestro_low":    83218,    # mínimo del ciclo mayo 2026 (referencia)
         "ob_maestro_high":   83512,    # soporte extremo clave
     },
 
-    # ── GainX 800 — NUEVO v4.9 ───────────────────────────
-    # Daily=415 | M15=33 | SL=59 | BEAR 53.6% Monthly
-    # ATENCIÓN: GainX en nombre pero behaves como BEAR macro
-    # Rebotes alcistas son los trades principales (FVG bull 38pts)
-    # FVG bear solo 24pts — bajadas más débiles que GainX 600
-    # Horas activas: pre-Londres 05-07 UTC (diferente al resto)
-    # Bidireccional: BUY en soportes, SELL en resistencias
+    # ── GainX 800 — ACTUALIZADO v4.10 (09-ago-2026) ───────
+    # Daily(P90)=554 | M15=34 | SL=53 | recalibrado 3 meses reales
     # ──────────────────────────────────────────────────────
     "GainX 800": {
-        "es_bajista":        False,    # técnicamente en SIMBOLOS_ALCISTAS
+        "es_bajista":        False,    # regla fija — GainX siempre compra
         "usar_fvg":          True,
         "usar_ob":           True,
         "usar_swinglow":     True,
         "tol_h1":            86,       # H1 avg=76 + 10 buffer
         "tol_h4":            160,      # H4 avg=162
         "reac_avg_h1":       110,      # reacción esperada conservadora
-        "sl_minimo":         59,       # ya calibrado en v4.3 (dato real)
-        "rango_diario":      415,      # dato real CSV (872 velas Daily)
-        "rango_m15":         33,       # dato real
-        "ob_h4_min":         160,      # P85 cuerpos H4 real
-        "ob_h1_min":         73,       # P85 cuerpos H1 real
-        "fvg_bull_fuerte":   38,       # avg real FVG alcistas M15 (MAYOR)
-        "fvg_bear_fuerte":   27,       # avg real FVG bajistas M15
-        "horas_activas_utc": [5,6,7,10,14,15,17,18,23,0,1],
-        "rango_saturado":    373,      # 415 * 0.9
-        "ob_maestro_low":    91247,    # Bull OB H4 clave (may 17)
+        "sl_minimo":         53,
+        "rango_diario":      554,
+        "rango_m15":         34,
+        "ob_h4_min":         153,      # P85 cuerpos H4 real (ago 2026)
+        "ob_h1_min":         76,       # P85 cuerpos H1 real
+        "fvg_bull_fuerte":   21,
+        "fvg_bear_fuerte":   14,
+        "horas_activas_utc": [1,7,10,13,14,17,21,22],
+        "rango_saturado":    499,      # 90% rango diario
+        "ob_maestro_low":    91247,    # Bull OB H4 clave (referencia histórica)
         "ob_maestro_high":   91494,    # zona de máxima confluencia
     },
 
-    # ── GainX 1200 — ACTUALIZADO v4.8 ─────────────────────
-    # Daily=~900pts | M15=25 | SL=48 | BULL alcista
-    # V-shapes M5: 200-230pts (más agresivos que GainX 600)
-    # Zona activa: OB H4 + Fib 78.6% = 91,088–91,130
-    # OB H1: 83% rebote (340 casos backtest real)
-    # SwingLow H1: 53% rebote (respaldo)
+    # ── GainX 1200 — ACTUALIZADO v4.10 (09-ago-2026) ──────
+    # Daily(P90)=464 | M15=25 | SL=45 | recalibrado 3 meses reales
+    # OB H1: 83% rebote (backtest histórico) | SwingLow como respaldo
     # ──────────────────────────────────────────────────────
     "GainX 1200": {
         "es_bajista":        False,
@@ -379,16 +409,16 @@ INDICE_CONFIG = {
         "tol_h1":            100,
         "tol_h4":            180,
         "reac_avg_h1":       140,
-        "sl_minimo":         48,
-        "rango_diario":      900,      # real — mayor que GainX 600
+        "sl_minimo":         45,
+        "rango_diario":      464,
         "rango_m15":         25,
-        "ob_h4_min":         250,      # calibrado (mayor que G600)
-        "ob_h1_min":         120,      # calibrado
-        "fvg_bull_fuerte":   50,
-        "fvg_bear_fuerte":   40,
-        "horas_activas_utc": [0,1,6,9,10,13,14,15,16,21,22,23],
-        "rango_saturado":    810,      # 90% rango diario
-        "ob_maestro_low":    91088,    # OB H4 + Fib 78.6% activo mayo 2026
+        "ob_h4_min":         130,      # P85 cuerpos H4 real (ago 2026)
+        "ob_h1_min":         58,       # P85 cuerpos H1 real
+        "fvg_bull_fuerte":   19,
+        "fvg_bear_fuerte":   12,
+        "horas_activas_utc": [2,6,8,11,12,19,21,23],
+        "rango_saturado":    418,      # 90% rango diario
+        "ob_maestro_low":    91088,    # OB H4 + Fib 78.6% (referencia histórica)
         "ob_maestro_high":   91130,
     },
 }

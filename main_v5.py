@@ -59,6 +59,7 @@
 # ============================================================
 
 import MetaTrader5 as mt5
+import os
 import time
 from datetime import datetime
 
@@ -107,6 +108,12 @@ from ob_v5 import verificar_obs
 # ── EmaScalpD (canal exclusivo Telegram) ──────────────────
 from emascalpd_v1 import analizar_emascalpd
 
+# ── Patrones Armónicos PCI (v1 — señal independiente, solo seguimiento) ──
+from harmonicos_v1 import analizar_patron_armonico
+
+# ── Estructura pura para índices nuevos bidireccionales (v1 — FX Vol / SFX Vol) ──
+from estructura_nuevos_v1 import analizar_estructura_nuevos
+
 # ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
 from spike_hunter_v1 import cazar_spikes
 # ═══ FIN BLOQUE COMPETENCIA ═══
@@ -129,6 +136,21 @@ CICLO_ZONAS_SEG = 900    # recalcular zonas cada 15 minutos
 
 def _clave_señal(simbolo):
     return f"señal_v5_{simbolo}"
+
+
+# ============================================================
+#  HEARTBEAT — para que watchdog.py detecte si el scanner
+#  se quedó colgado (nunca debe poder tumbar el scanner: por
+#  eso está protegido con su propio try/except).
+# ============================================================
+
+def _latido():
+    try:
+        heartbeat_path = os.path.join(os.path.dirname(__file__), "heartbeat.txt")
+        with open(heartbeat_path, 'w', encoding='utf-8') as f:
+            f.write(datetime.now().isoformat())
+    except Exception:
+        pass
 
 
 # ============================================================
@@ -751,6 +773,8 @@ def iniciar_v5():
     print(f"  🆕 Módulos v6.1: sweep + P/D filter + CHoCH M1 + OB H1/M1 + Contexto Macro")
     print(f"  ─────────────────────────────────────────────")
 
+    _latido()  # heartbeat inicial, antes del analisis macro (que puede tardar)
+
     # ── ANÁLISIS MACRO INICIAL (v6.1) ─────────────────────────
     # Corre UNA VEZ al arrancar. Analiza D1→H4→H1→M15→M5.
     # Resuelve el problema de rangos incorrectos al reiniciar:
@@ -766,7 +790,10 @@ def iniciar_v5():
             hora  = datetime.now().strftime('%H:%M:%S')
 
             # Refrescar contexto macro cada 60 min (no bloquea el ciclo)
-            refrescar_si_necesario()
+            try:
+                refrescar_si_necesario()
+            except Exception as e_ctx:
+                print(f"  [contexto] ERROR: {e_ctx}")
 
             resultados = []
 
@@ -778,19 +805,44 @@ def iniciar_v5():
                     print(f"  ❌ Error en {simbolo}: {e}")
                     resultados.append({'simbolo': simbolo, 'resultado': 'ERROR'})
 
-                # ── EmaScalpD — canal exclusivo (no toca flujo principal) ──
-                try:
-                    df_m5_ema = obtener_df(simbolo, TF_M5, 300)
-                    analizar_emascalpd(simbolo, df_m5_ema)
-                except Exception as e_ema:
-                    print(f"  [EmaScalpD] Error en {simbolo}: {e_ema}")
+                # ── EmaScalpD — DESACTIVADO (ya no envía señales a Telegram) ──
+                # Para reactivar, descomenta las 4 líneas de abajo.
+                # try:
+                #     df_m5_ema = obtener_df(simbolo, TF_M5, 300)
+                #     analizar_emascalpd(simbolo, df_m5_ema)
+                # except Exception as e_ema:
+                #     print(f"  [EmaScalpD] Error en {simbolo}: {e_ema}")
 
-                # ═══ INICIO BLOQUE COMPETENCIA (BORRAR AL TERMINAR) ═══
-                try:
-                    cazar_spikes(simbolo)
-                except Exception as e_spk:
-                    print(f"  [spike_hunter] Error en {simbolo}: {e_spk}")
+                # ═══ BLOQUE COMPETENCIA — DESACTIVADO 09-ago-2026 ═══
+                # (seguimiento de spikes, mandaba al mismo tópico EmaScalpD)
+                # Para reactivar, descomenta las 4 líneas de abajo.
+                # try:
+                #     cazar_spikes(simbolo)
+                # except Exception as e_spk:
+                #     print(f"  [spike_hunter] Error en {simbolo}: {e_spk}")
                 # ═══ FIN BLOQUE COMPETENCIA ═══
+
+                # ── Patrones Armónicos PCI — SOLO SEGUIMIENTO ──────
+                # Módulo 100% independiente (ver harmonicos_v1.py).
+                # No bloquea ni afecta ninguna señal TIPO1/TIPO1_OB/TIPO2.
+                # Si falla, se registra el error y el ciclo sigue normal.
+                try:
+                    analizar_patron_armonico(simbolo)
+                except Exception as e_harm:
+                    print(f"  [Harmónicos] Error en {simbolo}: {e_harm}")
+
+                # Heartbeat despues de cada simbolo (no solo al final del
+                # ciclo) para que el watchdog detecte un cuelgue rapido,
+                # incluso si se congela a mitad de un ciclo largo.
+                _latido()
+
+            # ── Estructura pura para índices nuevos (FX Vol / SFX Vol) ──
+            # Módulo 100% independiente — no toca el motor TIPO1/TIPO1_OB/TIPO2.
+            # Ver estructura_nuevos_v1.py para el detalle completo.
+            try:
+                analizar_estructura_nuevos()
+            except Exception as e_est_nuevos:
+                print(f"  [Estructura nueva] ERROR general: {e_est_nuevos}")
 
             # Panel cada 10 ciclos
             if ciclo % 10 == 0:
@@ -798,7 +850,10 @@ def iniciar_v5():
                 print(resumen_dia())
 
             # Verificar trades activos
-            verificar_trades()
+            try:
+                verificar_trades()
+            except Exception as e_vt:
+                print(f"  [verificar_trades] ERROR: {e_vt}")
 
             # Escuchar comandos Telegram
             try:
