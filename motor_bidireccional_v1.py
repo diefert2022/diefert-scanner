@@ -3,8 +3,13 @@
 #
 #  Mismo NIVEL de análisis que PainX/GainX (zonas históricas
 #  D1+H4+H1 con FVG+OB+swings, CHoCH en zona, BOS+retroceso),
-#  pero evaluando AMBAS direcciones por símbolo — porque FX Vol
-#  y SFX Vol no tienen lado fijo como PainX=venta/GainX=compra.
+#  pero evaluando AMBAS direcciones — porque FlipX no tiene
+#  lado fijo como PainX=venta/GainX=compra.
+#
+#  ⚠️ ALCANCE ACTUAL (24-ago-2026): solo FlipX 1-5. Los índices
+#  FX Vol/SFX Vol se sacaron de este motor por ahora (mucho
+#  volumen de señales mientras se estabilizaba P/G) — quedan
+#  en PERFIL_NUEVOS comentados más abajo por si se retoman.
 #
 #  REEMPLAZA a estructura_nuevos_v1.py (que ya no se usa desde
 #  main_v5.py — puedes borrarlo o dejarlo, no hace nada si no
@@ -105,24 +110,31 @@ from resistencias import (
 # ── Pieza reutilizada de ob_v5.py (función interna parametrizada) ──
 from ob_v5 import _detectar_ob as _ob_detectar_ob, VENTANA_OB_H1
 
-# ── Símbolos nuevos (mismo nombre en Weltrade y en el broker nuevo) ──
+# ── Símbolos bidireccionales (ahora solo FlipX — los Vol se sacaron) ──
 SIMBOLOS_ESTRUCTURA_NUEVOS = [
-    "FX Vol 20", "FX Vol 40", "FX Vol 60", "FX Vol 80", "FX Vol 99",
-    "SFX Vol 20", "SFX Vol 40", "SFX Vol 60", "SFX Vol 80", "SFX Vol 99",
+    "FlipX 1", "FlipX 2", "FlipX 3", "FlipX 4", "FlipX 5",
 ]
 
-# ── Perfil calibrado real por símbolo (actualizar_perfiles_nuevos_v1.py, 24-ago-2026) ──
+# ── Perfil calibrado real por símbolo — PENDIENTE ──
+# Esperando el archivo perfiles_flipx_actualizados_<fecha>.py de
+# actualizar_perfiles_flipx_v1.py. Mientras esté vacío, el símbolo
+# se salta solo (ver el guard en analizar_indices_bidireccionales)
+# — no crashea, simplemente no genera señales todavía.
 PERFIL_NUEVOS = {
-    "FX Vol 20":  {"sl_minimo": 206,  "rango_diario": 2819,  "rango_m15": 193,  "ob_h4_min": 733,  "ob_h1_min": 350,  "fvg_bull_fuerte": 73,  "fvg_bear_fuerte": 69,  "rango_saturado": 2537},
-    "FX Vol 40":  {"sl_minimo": 627,  "rango_diario": 8733,  "rango_m15": 593,  "ob_h4_min": 2219, "ob_h1_min": 1120, "fvg_bull_fuerte": 229, "fvg_bear_fuerte": 219, "rango_saturado": 7860},
-    "FX Vol 60":  {"sl_minimo": 174,  "rango_diario": 2230,  "rango_m15": 160,  "ob_h4_min": 612,  "ob_h1_min": 298,  "fvg_bull_fuerte": 61,  "fvg_bear_fuerte": 60,  "rango_saturado": 2007},
-    "FX Vol 80":  {"sl_minimo": 326,  "rango_diario": 4309,  "rango_m15": 304,  "ob_h4_min": 1193, "ob_h1_min": 565,  "fvg_bull_fuerte": 118, "fvg_bear_fuerte": 113, "rango_saturado": 3878},
-    "FX Vol 99":  {"sl_minimo": 353,  "rango_diario": 4628,  "rango_m15": 334,  "ob_h4_min": 1310, "ob_h1_min": 618,  "fvg_bull_fuerte": 125, "fvg_bear_fuerte": 128, "rango_saturado": 4165},
-    "SFX Vol 20": {"sl_minimo": 135,  "rango_diario": 1560,  "rango_m15": 102,  "ob_h4_min": 427,  "ob_h1_min": 224,  "fvg_bull_fuerte": 49,  "fvg_bear_fuerte": 53,  "rango_saturado": 1404},
-    "SFX Vol 40": {"sl_minimo": 446,  "rango_diario": 5651,  "rango_m15": 366,  "ob_h4_min": 1465, "ob_h1_min": 800,  "fvg_bull_fuerte": 178, "fvg_bear_fuerte": 177, "rango_saturado": 5086},
-    "SFX Vol 60": {"sl_minimo": 2365, "rango_diario": 33088, "rango_m15": 1975, "ob_h4_min": 8019, "ob_h1_min": 4257, "fvg_bull_fuerte": 983, "fvg_bear_fuerte": 975, "rango_saturado": 29779},
-    "SFX Vol 80": {"sl_minimo": 1429, "rango_diario": 20685, "rango_m15": 1152, "ob_h4_min": 5321, "ob_h1_min": 2598, "fvg_bull_fuerte": 597, "fvg_bear_fuerte": 579, "rango_saturado": 18616},
-    "SFX Vol 99": {"sl_minimo": 71,   "rango_diario": 889,   "rango_m15": 51,   "ob_h4_min": 210,  "ob_h1_min": 111,  "fvg_bull_fuerte": 26,  "fvg_bear_fuerte": 25,  "rango_saturado": 800},
+    # Los Vol se sacaron de este motor por ahora (24-ago-2026) —
+    # quedan comentados, no borrados, por si se retoman más adelante:
+    # "FX Vol 20":  {"sl_minimo": 206,  "rango_diario": 2819,  "rango_m15": 193,  "ob_h4_min": 733,  "ob_h1_min": 350,  "fvg_bull_fuerte": 73,  "fvg_bear_fuerte": 69,  "rango_saturado": 2537},
+    # "FX Vol 40":  {"sl_minimo": 627,  "rango_diario": 8733,  "rango_m15": 593,  "ob_h4_min": 2219, "ob_h1_min": 1120, "fvg_bull_fuerte": 229, "fvg_bear_fuerte": 219, "rango_saturado": 7860},
+    # "FX Vol 60":  {"sl_minimo": 174,  "rango_diario": 2230,  "rango_m15": 160,  "ob_h4_min": 612,  "ob_h1_min": 298,  "fvg_bull_fuerte": 61,  "fvg_bear_fuerte": 60,  "rango_saturado": 2007},
+    # "FX Vol 80":  {"sl_minimo": 326,  "rango_diario": 4309,  "rango_m15": 304,  "ob_h4_min": 1193, "ob_h1_min": 565,  "fvg_bull_fuerte": 118, "fvg_bear_fuerte": 113, "rango_saturado": 3878},
+    # "FX Vol 99":  {"sl_minimo": 353,  "rango_diario": 4628,  "rango_m15": 334,  "ob_h4_min": 1310, "ob_h1_min": 618,  "fvg_bull_fuerte": 125, "fvg_bear_fuerte": 128, "rango_saturado": 4165},
+    # "SFX Vol 20": {"sl_minimo": 135,  "rango_diario": 1560,  "rango_m15": 102,  "ob_h4_min": 427,  "ob_h1_min": 224,  "fvg_bull_fuerte": 49,  "fvg_bear_fuerte": 53,  "rango_saturado": 1404},
+    # "SFX Vol 40": {"sl_minimo": 446,  "rango_diario": 5651,  "rango_m15": 366,  "ob_h4_min": 1465, "ob_h1_min": 800,  "fvg_bull_fuerte": 178, "fvg_bear_fuerte": 177, "rango_saturado": 5086},
+    # "SFX Vol 60": {"sl_minimo": 2365, "rango_diario": 33088, "rango_m15": 1975, "ob_h4_min": 8019, "ob_h1_min": 4257, "fvg_bull_fuerte": 983, "fvg_bear_fuerte": 975, "rango_saturado": 29779},
+    # "SFX Vol 80": {"sl_minimo": 1429, "rango_diario": 20685, "rango_m15": 1152, "ob_h4_min": 5321, "ob_h1_min": 2598, "fvg_bull_fuerte": 597, "fvg_bear_fuerte": 579, "rango_saturado": 18616},
+    # "SFX Vol 99": {"sl_minimo": 71,   "rango_diario": 889,   "rango_m15": 51,   "ob_h4_min": 210,  "ob_h1_min": 111,  "fvg_bull_fuerte": 26,  "fvg_bear_fuerte": 25,  "rango_saturado": 800},
+    #
+    # FlipX 1-5 — esperando calibración (actualizar_perfiles_flipx_v1.py):
 }
 
 # ── Parámetros generales (scale-invariant, mismos que main_v5.py) ──
@@ -491,6 +503,8 @@ def analizar_indices_bidireccionales():
 
     for simbolo in SIMBOLOS_ESTRUCTURA_NUEVOS:
         try:
+            if simbolo not in PERFIL_NUEVOS:
+                continue   # todavía sin calibrar (esperando perfiles_flipx_actualizados_*.py)
             perfil = PERFIL_NUEVOS[simbolo]
             esc    = _parametros_escalados(perfil)
 
