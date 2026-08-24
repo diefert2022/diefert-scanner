@@ -169,11 +169,12 @@ def limpiar_obs_usados(simbolo, obs_frescos_actuales):
 # ── TELEGRAM ──────────────────────────────────────────────
 
 # ── CANALES DE DESTINO ────────────────────────────────────
-# Señales llegan a AMBOS canales simultáneamente
+# Señales llegan a TODOS los canales de esta lista simultáneamente
 CHAT_IDS = [
   #  CHAT_ID,              # canal principal (config.py)
    # "-1003933298024",    # Señales unidos
     "-1003918647141",    # Señales Weltrade Diefert
+    "-1004427655538",    # SynthX Scanner Pro — agregado 24-ago-2026
 ]
 
 def enviar_telegram(mensaje):
